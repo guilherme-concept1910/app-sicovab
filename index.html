@@ -85,6 +85,8 @@ table{width:100%;border-collapse:collapse;min-width:1200px}
 thead th{background:var(--surface2);font-size:9.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);text-align:left;padding:9px 8px;border-bottom:1px solid var(--border);cursor:pointer;white-space:nowrap}
 tbody td{padding:8px;border-bottom:1px solid var(--border);font-size:11px;white-space:nowrap}
 tbody tr:hover{background:var(--surface2)}tbody tr{cursor:pointer}
+tr.selected-row{background:var(--accent-soft) !important;}
+tr.selected-row:hover{background:#dbeafe !important;}
 td.os{font-family:'JetBrains Mono',monospace;font-weight:600;color:var(--primary);font-size:10.5px}
 .badge{display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:99px;font-size:10px;font-weight:700;white-space:nowrap}
 .badge .dot{width:5px;height:5px;border-radius:50%}
@@ -201,12 +203,17 @@ td.os{font-family:'JetBrains Mono',monospace;font-weight:600;color:var(--primary
 .history-item { font-size: 11px; padding: 8px; border-bottom: 1px dashed var(--border); display: flex; flex-direction: column; gap: 4px; }
 .history-item b { color: var(--primary); }
 .history-date { font-size: 9px; color: var(--muted); font-family: 'JetBrains Mono', monospace;}
-/* BULK ACTIONS */
-.bulk-bar { position: sticky; bottom: 20px; background: var(--primary); color: #fff; padding: 10px 20px; border-radius: 30px; display: flex; align-items: center; gap: 15px; box-shadow: 0 4px 12px rgba(0,0,0,0.3); z-index: 100; justify-content: center; margin: 10px auto; width: fit-content; flex-wrap: wrap;}
-.bulk-bar span { font-size: 13px; font-weight: bold; }
-.bulk-bar button { background: #fff; color: var(--primary); padding: 6px 12px; border-radius: 15px; font-weight: bold; border: none; cursor: pointer; font-size: 11px;}
-.bulk-bar button:hover { background: var(--accent-soft); }
+.bulk-bar { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); background: var(--primary); color: #fff; padding: 12px 24px; border-radius: 50px; display: flex; align-items: center; gap: 15px; box-shadow: 0 8px 24px rgba(0,0,0,0.3); z-index: 200; justify-content: center; flex-wrap: wrap; border: 2px solid #fff;}
+.bulk-bar span { font-size: 14px; font-weight: bold; white-space: nowrap;}
+.bulk-bar button { background: #fff; color: var(--primary); padding: 8px 16px; border-radius: 20px; font-weight: bold; border: none; cursor: pointer; font-size: 12px; transition: all 0.2s;}
+.bulk-bar button:hover { background: var(--accent-soft); transform: translateY(-1px);}
 .bulk-bar button.danger { color: var(--red); }
+input[type="checkbox"] { width: 20px; height: 20px; cursor: pointer; accent-color: var(--primary); }
+.checkbox-cell { width: 40px; padding: 4px !important; text-align: center; cursor: default; }
+.checkbox-header { width: 40px; padding: 4px !important; text-align: center; cursor: default; }
+.selection-toolbar { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 12px; padding: 10px; background: var(--surface2); border: 1px dashed var(--border); border-radius: 8px; align-items: center; }
+.selection-toolbar .sel-info { font-size: 12px; color: var(--text2); font-weight: 600; margin-right: auto; }
+.selection-toolbar .sel-info b { color: var(--primary); font-family: 'JetBrains Mono', monospace; }
 
 @media(max-width:1100px){.dash-bottom-grid{grid-template-columns:1fr}}
 @media(max-width:960px){
@@ -222,6 +229,7 @@ td.os{font-family:'JetBrains Mono',monospace;font-weight:600;color:var(--primary
 .topbar{padding:8px 12px}
 .content{padding:12px}
 .toast{bottom:72px;left:12px;right:12px;max-width:none}
+.bulk-bar{bottom: 80px;}
 }
 @media(max-width:640px){
 .login-card{padding:28px 22px;border-radius:16px}
@@ -428,7 +436,7 @@ input,select,textarea{font-size:16px}
 <select id="fCliente"><option value="">Cliente: todos</option></select>
 <select id="fBlind"><option value="">Blindagem: todas</option></select>
 <select id="fStatus"><option value="">Status: todos</option><option value="emitido">Emitidas</option><option value="pendente">Pendentes</option><option value="atrasado">Atrasadas</option></select>
-<button class="btn btn-ghost btn-sm" id="btnClear">Limpar</button>
+<button class="btn btn-ghost btn-sm" id="btnClear">🗑️ Limpar Todos</button>
 </div>
 <div class="temporal-bar">
 <div class="temporal-group"><label>Filtrar por</label><select id="fRecDateField"><option value="">Qualquer data</option><option value="emissaoDB">Emissão D.B</option><option value="prazoEmissaoDB">Prazo D.B</option><option value="sicovabEnvio">Envio Sicovab</option><option value="autorizacao">Autorização</option><option value="emissaoTermo">Emissão Termo</option><option value="engenhariaAss">Engenharia Ass.</option><option value="procAss">Proc. Ass.</option></select></div>
@@ -437,12 +445,19 @@ input,select,textarea{font-size:16px}
 <div class="temporal-group"><label>Ano</label><select id="fRecYear" class="year-select"><option value="">Ano: todos</option></select></div>
 <div class="temporal-group full-mob"><label>Período (De — Até)</label><div class="temporal-period"><input type="date" id="fRecFrom" title="Data inicial"><span>até</span><input type="date" id="fRecTo" title="Data final"></div></div>
 </div>
+<div class="selection-toolbar">
+  <span class="sel-info">📊 <b id="sel-count-dbs">0</b> selecionadas de <b id="sel-total-dbs">0</b></span>
+  <span id="active-filters-dbs" class="sel-info" style="color:var(--amber); display:none;">🎯 <b id="active-filters-count-dbs">0</b> filtros ativos</span>
+  <button class="btn btn-success btn-sm" onclick="selectPageDbs()">☑️ Selecionar Página</button>
+  <button class="btn btn-success btn-sm" onclick="selectAllDbs()">☑️ Selecionar Todos</button>
+  <button class="btn btn-ghost btn-sm" onclick="clearSelectionDbs()">⬜ Limpar Seleção</button>
+</div>
 <div class="table-wrap"><table><thead><tr id="theadRow"></tr></thead><tbody id="tbodyRec"></tbody></table></div>
 <div id="bulk-actions-dbs" class="bulk-bar hidden">
   <span><b id="bulk-count-dbs">0</b> selecionadas</span>
   <button onclick="bulkUpdateDbs('sicovabEnvio')">Enviar Sicovab Hoje</button>
   <button onclick="bulkUpdateDbs('emissaoDB')">Emitir D.B Hoje</button>
-  <button class="danger" onclick="clearSelectionDbs()">Cancelar</button>
+  <button class="danger" onclick="clearSelectionDbs()">✕ Cancelar</button>
 </div>
 <div class="pagination"><span class="pg-info" id="pgInfo"></span><div class="pg-btns" id="pgBtns"></div></div>
 </div>
@@ -459,7 +474,7 @@ input,select,textarea{font-size:16px}
 <div class="date-tags-list" id="fExcDateTags"></div>
 <div class="date-tags-hint">Filtra por envio Sicovab, prazo, emissão, coleta</div>
 </div>
-<button class="btn btn-ghost btn-sm" id="btnExcClear">Limpar</button>
+<button class="btn btn-ghost btn-sm" id="btnExcClear">🗑️ Limpar Todos</button>
 </div>
 <div class="temporal-bar">
 <div class="temporal-group"><label>Filtrar por</label><select id="fExcDateField"><option value="">Qualquer data</option><option value="envioSicovab">Envio Sicovab</option><option value="prazoEmissao">Prazo Emissão</option><option value="dataEmissao">Data Emissão</option><option value="dataColeta">Data Coleta</option><option value="prazo9dias">Prazo 9 Dias</option><option value="dtaPrev07">Prev. 07 Dias</option><option value="dtaPrev09">Prev. 09 Dias</option></select></div>
@@ -468,12 +483,19 @@ input,select,textarea{font-size:16px}
 <div class="temporal-group"><label>Ano</label><select id="fExcYear" class="year-select"><option value="">Ano: todos</option></select></div>
 <div class="temporal-group full-mob"><label>Período (De — Até)</label><div class="temporal-period"><input type="date" id="fExcFrom" title="Data inicial"><span>até</span><input type="date" id="fExcTo" title="Data final"></div></div>
 </div>
+<div class="selection-toolbar">
+  <span class="sel-info">📊 <b id="sel-count-exc">0</b> selecionadas de <b id="sel-total-exc">0</b></span>
+  <span id="active-filters-exc" class="sel-info" style="color:var(--amber); display:none;">🎯 <b id="active-filters-count-exc">0</b> filtros ativos</span>
+  <button class="btn btn-success btn-sm" onclick="selectPageExc()">☑️ Selecionar Página</button>
+  <button class="btn btn-success btn-sm" onclick="selectAllExc()">☑️ Selecionar Todos</button>
+  <button class="btn btn-ghost btn-sm" onclick="clearSelectionExc()">⬜ Limpar Seleção</button>
+</div>
 <div class="table-wrap"><table style="min-width:1200px"><thead><tr id="excHeadRow"></tr></thead><tbody id="excBody"></tbody></table></div>
 <div id="bulk-actions-exc" class="bulk-bar hidden">
   <span><b id="bulk-count-exc">0</b> selecionadas</span>
   <button onclick="bulkUpdateExc('envioSicovab')">Enviar Sicovab Hoje</button>
   <button onclick="bulkUpdateExc('dataEmissao')">Emitir Aut. Hoje</button>
-  <button class="danger" onclick="clearSelectionExc()">Cancelar</button>
+  <button class="danger" onclick="clearSelectionExc()">✕ Cancelar</button>
 </div>
 <div class="pagination"><span class="pg-info" id="excPgInfo"></span><div class="pg-btns" id="excPgBtns"></div></div>
 </div>
@@ -606,42 +628,24 @@ function getUserStamp(u){
   return Math.max(isNaN(t1)?0:t1,isNaN(t2)?0:t2);
 }
 
-// =============== ANTI-DUPLICIDADE DE USUÁRIOS ===============
 function cleanDuplicateUsers(users) {
   if (!Array.isArray(users)) return [];
   const map = new Map();
-  
   users.forEach(u => {
     if (!u || !u.email) return;
     const email = u.email.trim().toLowerCase();
-    // Normaliza o prefixo do email (ex: flavia.silva -> flaviasilva)
     const prefix = normIdentity(vendName(email)); 
     const normName = normIdentity(u.name);
-    
-    // Chave de agrupamento: prefixo do email normalizado ou nome normalizado
     const key = prefix || normName || email; 
-    
-    if (!map.has(key)) {
-      map.set(key, u);
-    } else {
+    if (!map.has(key)) { map.set(key, u); } else {
       const cur = map.get(key);
       const sCur = getUserStamp(cur);
       const sNew = getUserStamp(u);
-      
-      // Mantém o que tem dados mais recentes
       const best = sNew > sCur ? u : cur;
       const worst = sNew > sCur ? cur : u;
-      
-      // Prefere o e-mail que tenha ponto (mais amigável), senão usa o do best
       const bestEmail = best.email.includes('.') ? best.email : (worst.email.includes('.') ? worst.email : best.email);
       const bestName = best.name || worst.name || vendName(bestEmail);
-      
-      map.set(key, {
-        ...worst,
-        ...best,
-        email: bestEmail,
-        name: bestName
-      });
+      map.set(key, { ...worst, ...best, email: bestEmail, name: bestName });
     }
   });
   return Array.from(map.values());
@@ -656,44 +660,27 @@ function mergeUsersVault(...lists){
       const key=u.email.trim().toLowerCase();
       if(deletedSet.has(key)&&key!=='admin@conceptbesafe.com.br')return;
       const normalized={...u,email:key,role:u.role||'vendedor',team:Array.isArray(u.team)?u.team:[]};
-      if(!map.has(key)){
-        map.set(key,normalized);
-      }else{
+      if(!map.has(key)){ map.set(key,normalized); }
+      else{
         const cur=map.get(key);
         const sCur=getUserStamp(cur);
         const sNew=getUserStamp(normalized);
-
         const pCur=cur.passwordLastChanged?new Date(cur.passwordLastChanged).getTime():0;
         const pNew=normalized.passwordLastChanged?new Date(normalized.passwordLastChanged).getTime():0;
         const curCustom=Boolean(cur.passwordLastChanged||cur.mustChange===false||(cur.pass&&cur.pass!==DEFAULT_HASH));
         const newCustom=Boolean(normalized.passwordLastChanged||normalized.mustChange===false||(normalized.pass&&normalized.pass!==DEFAULT_HASH));
-
         let bestPass=cur.pass,bestMustChange=cur.mustChange,bestPassTime=cur.passwordLastChanged;
         if(pNew>pCur||(sNew>sCur&&normalized.pass)||(newCustom&&!curCustom)){
-          bestPass=normalized.pass;
-          bestMustChange=normalized.mustChange;
+          bestPass=normalized.pass; bestMustChange=normalized.mustChange;
           bestPassTime=normalized.passwordLastChanged||normalized.updatedAt||cur.passwordLastChanged;
         }else if((pCur===pNew&&sNew>=sCur&&normalized.pass)||(newCustom&&!curCustom&&normalized.pass)){
-          bestPass=normalized.pass;
-          bestMustChange=normalized.mustChange;
+          bestPass=normalized.pass; bestMustChange=normalized.mustChange;
           bestPassTime=normalized.passwordLastChanged||cur.passwordLastChanged;
         }
-
-        const rankCur=ROLE_RANK[cur.role]||1;
-        const rankNew=ROLE_RANK[normalized.role]||1;
+        const rankCur=ROLE_RANK[cur.role]||1; const rankNew=ROLE_RANK[normalized.role]||1;
         let bestRole=cur.role,bestTeam=(cur.team&&cur.team.length)?cur.team:(normalized.team||[]),bestName=cur.name||normalized.name;
-        if(sNew>sCur){
-          bestRole=normalized.role;
-          bestTeam=normalized.team||[];
-          bestName=normalized.name||cur.name;
-        }else if(sCur===sNew){
-          if(rankNew>=rankCur){
-            bestRole=normalized.role;
-            if(normalized.team&&normalized.team.length)bestTeam=normalized.team;
-          }
-          if(normalized.name)bestName=normalized.name;
-        }
-
+        if(sNew>sCur){ bestRole=normalized.role; bestTeam=normalized.team||[]; bestName=normalized.name||cur.name; }
+        else if(sCur===sNew){ if(rankNew>=rankCur){ bestRole=normalized.role; if(normalized.team&&normalized.team.length)bestTeam=normalized.team; } if(normalized.name)bestName=normalized.name; }
         const bestUpd=sNew>=sCur?(normalized.updatedAt||cur.updatedAt):cur.updatedAt;
         map.set(key,{...cur,...normalized,name:bestName,role:bestRole,team:bestTeam,pass:bestPass,mustChange:bestMustChange,passwordLastChanged:bestPassTime,updatedAt:bestUpd});
       }
@@ -712,7 +699,6 @@ async function saveDB(syncScope='all'){
   const ok = await pushToCloud(syncScope);
   if(!ok && getCloudBaseUrl()){
     toast('⚠️ Salvo neste aparelho, mas NÃO sincronizou na nuvem. Verifique o Cofre Nuvem.','err');
-    console.warn('[CBS] pushToCloud retornou FALSE para scope=' + syncScope);
   }
   return ok;
 }
@@ -726,20 +712,13 @@ async function loadAllDatabases(){
   try{const r=localStorage.getItem(DB_KEY);if(r)locData=JSON.parse(r)}catch(e){}
   try{const v=localStorage.getItem(USERS_VAULT_KEY);if(v)locVaultUsers=JSON.parse(v)||[]}catch(e){}
   const [idbData,idbVaultUsers]=await Promise.all([idbGet(DB_KEY),idbGet(USERS_VAULT_KEY)]);
-
-  const delSet=new Set([
-    ...((embedded&&embedded.deletedUsers)||[]),
-    ...((locData&&locData.deletedUsers)||[]),
-    ...((idbData&&idbData.deletedUsers)||[])
-  ].map(e=>String(e).toLowerCase()));
+  const delSet=new Set([...((embedded&&embedded.deletedUsers)||[]),...((locData&&locData.deletedUsers)||[]),...((idbData&&idbData.deletedUsers)||[])].map(e=>String(e).toLowerCase()));
   DB.deletedUsers=Array.from(delSet);
-
   const sources=[embedded,locData,idbData].filter(Boolean);
   const bestDbs=pickBestDataset(sources,'dbs');
   DB.declaracoes=bestDbs.records;DB.lastUpdate.dbs=bestDbs.timestamp;DB.lastFiles.dbs=bestDbs.fileMeta;
   const bestAut=pickBestDataset(sources,'aut');
   DB.autorizacoes=bestAut.records;DB.lastUpdate.aut=bestAut.timestamp;DB.lastFiles.aut=bestAut.fileMeta;
-
   const embTs=embedded&&embedded.exportedAt?new Date(embedded.exportedAt).getTime():0;
   const lastSeenEmbTs=Number(localStorage.getItem(LAST_EMB_TS_KEY)||0);
   if(embTs>lastSeenEmbTs){
@@ -748,15 +727,8 @@ async function loadAllDatabases(){
   }else{
     DB.usuarios=mergeUsersVault(embedded&&embedded.usuarios,locData&&locData.usuarios,idbData&&idbData.usuarios,locVaultUsers,idbVaultUsers);
   }
-  
-  // LIMPEZA ANTI-DUPLICIDADE
   DB.usuarios = cleanDuplicateUsers(DB.usuarios);
-
-  sources.forEach(s=>{
-    if(s&&s.config){
-      if(s.config.theme)DB.config.theme=s.config.theme;
-    }
-  });
+  sources.forEach(s=>{ if(s&&s.config){ if(s.config.theme)DB.config.theme=s.config.theme; } });
 }
 
 function getCloudBaseUrl(){const emb=getEmbeddedSnapshot();const u=(DB.config&&DB.config.cloudUrl)||localStorage.getItem(CLOUD_CFG_KEY)||(emb&&emb.config&&emb.config.cloudUrl)||'';return String(u).trim().replace(/\/+$/,'')}
@@ -768,9 +740,6 @@ async function pushToCloud(scope='all'){
   if(!base)return false;
   const vKey=getCloudVaultKey();
   try{
-    const badge=$('#storageBadge');
-    if(badge)badge.textContent='🔄 Sincronizando alterações na nuvem...';
-    console.log('[CBS] pushToCloud →', scope, 'base=', base, 'vKeyLen=', (vKey||'').length);
     const isFirebase=base.includes('firebaseio.com')||base.includes('firebasedatabase.app');
     const tsParam='?t='+Date.now();
     if(isFirebase){
@@ -780,12 +749,10 @@ async function pushToCloud(scope='all'){
       const remoteObj=remoteRaw&&remoteRaw.cipher?decryptVaultPayload(remoteRaw.cipher,vKey):remoteRaw;
       const remoteUsers=Array.isArray(remoteObj)?remoteObj:(remoteObj&&Array.isArray(remoteObj.usuarios)?remoteObj.usuarios:null);
       const remoteDeleted=(remoteObj&&Array.isArray(remoteObj.deletedUsers))?remoteObj.deletedUsers:[];
-      if(remoteDeleted.length){
-        DB.deletedUsers=[...new Set([...(DB.deletedUsers||[]),...remoteDeleted])];
-      }
+      if(remoteDeleted.length){ DB.deletedUsers=[...new Set([...(DB.deletedUsers||[]),...remoteDeleted])]; }
       if(Array.isArray(remoteUsers)){
         DB.usuarios=mergeUsersVault(remoteUsers,DB.usuarios);
-        DB.usuarios = cleanDuplicateUsers(DB.usuarios); // Limpa aqui também
+        DB.usuarios = cleanDuplicateUsers(DB.usuarios);
         await saveUsersVault();
       }
       await fetchWithTimeout(uUrl,{
@@ -806,7 +773,6 @@ async function pushToCloud(scope='all'){
       const fullPayload={usuarios:DB.usuarios,deletedUsers:DB.deletedUsers||[],declaracoes:DB.declaracoes,autorizacoes:DB.autorizacoes,lastUpdate:DB.lastUpdate,lastFiles:DB.lastFiles};
       await fetchWithTimeout(base,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({cipher:encryptVaultPayload(fullPayload,vKey)})},5000);
     }
-    console.log('[CBS] pushToCloud OK', scope, 'em', new Date().toISOString());
     window.__lastPushOK = new Date().toISOString();
     updateBarRender();
     return true;
@@ -830,18 +796,14 @@ async function pullFromCloud(silent=true){
         fetchWithTimeout(getCloudEndpoint('cbs_users_enc')+tsParam,{cache:'no-store'},3000),
         fetchWithTimeout(getCloudEndpoint('cbs_sheets_enc')+tsParam,{cache:'no-store'},3500)
       ]);
-      
       if(rU && (rU.status === 401 || rU.status === 403)){
-        console.error("❌ [CBS] Firebase recusou a leitura (401/403). Verifique as Regras do Firebase e se a Chave Secreta bate.");
         window.__lastPullOK = null;
         if(!silent) toast('Erro 401: Verifique as regras do Firebase.', 'err');
         updateBarRender();
         return false;
       }
-
       const uRaw=rU&&rU.ok?await rU.json().catch(()=>null):null;
       const sRaw=rS&&rS.ok?await rS.json().catch(()=>null):null;
-      
       if(uRaw){
         const decU=uRaw.cipher?decryptVaultPayload(uRaw.cipher,vKey):uRaw;
         if(Array.isArray(decU))remoteUsers=decU;
@@ -854,7 +816,6 @@ async function pullFromCloud(silent=true){
     }else{
       const rFull=await fetchWithTimeout(base+tsParam,{cache:'no-store'},3500);
       if(rFull && (rFull.status === 401 || rFull.status === 403)){
-         console.error("❌ [CBS] Firebase recusou (401/403).");
          window.__lastPullOK = null;
          updateBarRender();
          return false;
@@ -864,20 +825,17 @@ async function pullFromCloud(silent=true){
       if(full){remoteUsers=full.usuarios;remoteDeleted=full.deletedUsers||[];remoteSheets=full}
     }
   }catch(e){
-    console.warn('[CBS] pull falhou:',e);
     window.__lastPullOK = null;
     updateBarRender();
     return false;
   }
 
   let updated=false;
-  if(remoteDeleted.length){
-    DB.deletedUsers=[...new Set([...(DB.deletedUsers||[]),...remoteDeleted])];
-  }
+  if(remoteDeleted.length){ DB.deletedUsers=[...new Set([...(DB.deletedUsers||[]),...remoteDeleted])]; }
   if(Array.isArray(remoteUsers)&&remoteUsers.length){
     const beforeJSON=JSON.stringify(DB.usuarios);
     DB.usuarios=mergeUsersVault(DB.usuarios,remoteUsers);
-    DB.usuarios = cleanDuplicateUsers(DB.usuarios); // Limpa após merge
+    DB.usuarios = cleanDuplicateUsers(DB.usuarios);
     if(JSON.stringify(DB.usuarios)!==beforeJSON)updated=true;
   }
   if(remoteSheets){
@@ -885,26 +843,20 @@ async function pullFromCloud(silent=true){
     const beforeAut=JSON.stringify(DB.autorizacoes);
     const bestDbs=pickBestDataset([DB,remoteSheets],'dbs');
     const bestAut=pickBestDataset([DB,remoteSheets],'aut');
-    
     if(bestDbs.records.length>0 && bestDbs.timestamp !== DB.lastUpdate.dbs) {
         DB.declaracoes=bestDbs.records;DB.lastUpdate.dbs=bestDbs.timestamp;DB.lastFiles.dbs=bestDbs.fileMeta;
     }
     if(bestAut.records.length>0 && bestAut.timestamp !== DB.lastUpdate.aut) {
         DB.autorizacoes=bestAut.records;DB.lastUpdate.aut=bestAut.timestamp;DB.lastFiles.aut=bestAut.fileMeta;
     }
-
-    if(JSON.stringify(DB.declaracoes)!==beforeDbs || JSON.stringify(DB.autorizacoes)!==beforeAut) {
-        updated=true;
-    }
+    if(JSON.stringify(DB.declaracoes)!==beforeDbs || JSON.stringify(DB.autorizacoes)!==beforeAut) { updated=true; }
   }
-  
   if(updated){
     await saveLocalOnly();
     refreshActiveScreen();
     if(!silent)toast('Sincronizado com a nuvem!');
   }
   window.__lastPullOK = new Date().toISOString();
-  console.log('[CBS] pull OK em', window.__lastPullOK, 'updated=', updated);
   updateBarRender();
   return true;
 }
@@ -916,12 +868,8 @@ function iniciarTempoReal(){
   const base = getCloudBaseUrl();
   const vKey = getCloudVaultKey();
   if(!base || !vKey || !base.includes('firebase')) return;
-
   if(conexaoUsuarios) conexaoUsuarios.close();
   if(conexaoPlanilhas) conexaoPlanilhas.close();
-
-  console.log("🚀 [CBS] Conectando em Tempo Real ao Firebase...");
-
   conexaoUsuarios = new EventSource(`${base}/vaults/${vKey}/cbs_users_enc.json`);
   conexaoUsuarios.addEventListener('put', async (e) => {
     try {
@@ -935,13 +883,11 @@ function iniciarTempoReal(){
           if(JSON.stringify(DB.usuarios) !== before) {
             await saveLocalOnly();
             refreshActiveScreen();
-            console.log("⚡ [CBS] Usuários atualizados em tempo real!");
           }
         }
       }
-    } catch(err) { console.warn("Erro websocket user", err); }
+    } catch(err) { }
   });
-
   conexaoPlanilhas = new EventSource(`${base}/vaults/${vKey}/cbs_sheets_enc.json`);
   conexaoPlanilhas.addEventListener('put', async (e) => {
     try {
@@ -951,21 +897,18 @@ function iniciarTempoReal(){
         if(dec && dec.declaracoes){
           const beforeDbs = JSON.stringify(DB.declaracoes);
           const beforeAut = JSON.stringify(DB.autorizacoes);
-          
           DB.declaracoes = dec.declaracoes;
           DB.autorizacoes = dec.autorizacoes;
           DB.lastUpdate = dec.lastUpdate || DB.lastUpdate;
           DB.lastFiles = dec.lastFiles || DB.lastFiles;
-          
           if(JSON.stringify(DB.declaracoes) !== beforeDbs || JSON.stringify(DB.autorizacoes) !== beforeAut) {
             await saveLocalOnly();
             refreshActiveScreen();
-            console.log("⚡ [CBS] Planilhas atualizadas em tempo real!");
             if(currentUser) toast('Sincronizado em tempo real!', 'ok');
           }
         }
       }
-    } catch(err) { console.warn("Erro websocket sheets", err); }
+    } catch(err) { }
   });
 }
 
@@ -973,20 +916,17 @@ function getProcessosCriticos() {
     if(!currentUser) return { dbs: [], auts: [] };
     const hoje = todayISO();
     const limite3d = addDaysISO(hoje, 3);
-
     const dbsCriticas = visibleRecords().filter(r => {
         const st = recStatus(r);
         if(st === 'atrasado') return true;
         if(st === 'pendente' && r.prazoEmissaoDB && r.prazoEmissaoDB <= limite3d) return true;
         return false;
     });
-
     const excCriticas = visibleExc().filter(r => {
         if(r.dataEmissao) return false;
         if(r.prazoEmissao && r.prazoEmissao <= limite3d) return true;
         return false;
     });
-
     return { dbs: dbsCriticas, auts: excCriticas };
 }
 
@@ -994,7 +934,6 @@ function checkPrazosCriticos() {
     if(!currentUser) return;
     const criticas = getProcessosCriticos();
     const total = criticas.dbs.length + criticas.auts.length;
-
     if (total > 0) {
         if(!sessionStorage.getItem('cbs_alert_shown')) {
             sessionStorage.setItem('cbs_alert_shown', 'true');
@@ -1015,23 +954,19 @@ function checkPrazosCriticos() {
 window.openAlertsModal = function() {
     const criticas = getProcessosCriticos();
     let html = '<div class="modal-head"><h3>🚨 Log de Prazos Críticos</h3><button class="modal-close" onclick="closeModal()">✕</button></div><div class="modal-body">';
-    
     if(criticas.dbs.length > 0) {
         html += '<h4 style="color:var(--red);font-size:12px;margin-bottom:5px;">Declarações de Blindagem (D.Bs)</h4><ul style="padding-left:20px;font-size:11px;line-height:1.8;margin-bottom:15px;">';
         criticas.dbs.forEach(c => { html += `<li><b>OS ${esc(c.os)}</b> - ${esc(c.cliente)} (Prazo: ${fmtDate(c.prazoEmissaoDB)})</li>`; });
         html += '</ul>';
     }
-    
     if(criticas.auts.length > 0) {
         html += '<h4 style="color:var(--amber);font-size:12px;margin-bottom:5px;">Autorizações Pendentes</h4><ul style="padding-left:20px;font-size:11px;line-height:1.8;">';
         criticas.auts.forEach(c => { html += `<li><b>OS ${esc(c.os)}</b> - ${esc(c.cliente)} (Prazo: ${fmtDate(c.prazoEmissao)})</li>`; });
         html += '</ul>';
     }
-
     if(criticas.dbs.length === 0 && criticas.auts.length === 0) {
         html += '<p style="text-align:center;padding:20px;color:var(--green)">✅ Nenhum prazo crítico no momento!</p>';
     }
-    
     html += '</div><div class="modal-foot"><button class="btn btn-primary" onclick="closeModal()">Fechar Log</button></div>';
     openModal(html, false, 'narrow');
 };
@@ -1040,10 +975,8 @@ function renderDashAlerts() {
     if(!currentUser) return;
     const banner = document.getElementById('dash-alert-banner');
     if(!banner) return;
-
     const criticas = getProcessosCriticos();
     const total = criticas.dbs.length + criticas.auts.length;
-
     if(total > 0) {
         banner.classList.remove('hidden');
         document.getElementById('alert-count').textContent = total;
@@ -1055,28 +988,22 @@ function renderDashAlerts() {
 window.exportDashboardPDF = async function() {
     const btn = document.getElementById('btnDashPDF');
     if(btn) { btn.innerHTML = 'Gerando PDF...'; btn.disabled = true; }
-
     const content = document.createElement('div');
     content.style.cssText = 'font-family:sans-serif;color:#000;padding:20px;background:#fff;width:800px;';
-    
     content.innerHTML = `
       <div style="text-align:center;margin-bottom:20px;border-bottom:2px solid #1e40af;padding-bottom:10px">
         <h2 style="margin:0;color:#1e40af;font-size:24px">Concept Be Safe</h2>
         <p style="margin:5px 0 0 0;font-size:14px">Relatório Gerencial - ${new Date().toLocaleDateString('pt-BR')}</p>
       </div>
     `;
-
     const kpis = document.querySelector('.kpi-grid').cloneNode(true);
     kpis.querySelectorAll('.kpi-ico').forEach(el => el.remove());
     content.innerHTML += `<h3 style="color:#0f172a;border-bottom:1px solid #ccc;padding-bottom:5px;margin-top:20px">Indicadores</h3>`;
     content.innerHTML += kpis.outerHTML;
-
     const tableWrap = document.querySelector('.dash-bottom-grid .card').cloneNode(true);
     content.innerHTML += `<h3 style="color:#0f172a;border-bottom:1px solid #ccc;padding-bottom:5px;margin-top:20px">Desempenho por Vendedor</h3>`;
     content.innerHTML += tableWrap.innerHTML;
-
     const opt = { margin: 10, filename: `Relatorio_Gerencial_${todayISO()}.pdf`, image: { type: 'jpeg', quality: 0.98 }, html2canvas: { scale: 2, useCORS: true }, jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' } };
-    
     html2pdf().set(opt).from(content).save().then(() => {
         if(btn) { btn.innerHTML = '📄 Baixar Relatório Gerencial (PDF)'; btn.disabled = false; }
     });
@@ -1086,15 +1013,10 @@ window.salvarNota = async function(os) {
     const notaInput = document.getElementById('notaOS');
     const nota = notaInput.value.trim();
     if(!nota) return toast('Digite uma anotação primeiro.', 'err');
-    
     const idx = DB.declaracoes.findIndex(r => String(r.os) === String(os));
     if(idx >= 0) {
         if(!DB.declaracoes[idx].history) DB.declaracoes[idx].history = [];
-        DB.declaracoes[idx].history.push({
-            data: new Date().toISOString(),
-            autor: currentUser.name || currentUser.email,
-            texto: nota
-        });
+        DB.declaracoes[idx].history.push({ data: new Date().toISOString(), autor: currentUser.name || currentUser.email, texto: nota });
         notaInput.value = '';
         await saveDB('all');
         openDetail(DB.declaracoes[idx]);
@@ -1133,14 +1055,12 @@ window.salvarEdicaoOS = async function(os) {
    if(idx < 0) return;
    const old = DB.declaracoes[idx];
    const auditLog = [];
-   
    if(old.cliente !== document.getElementById('editCli').value.trim()) auditLog.push(`Cliente: ${old.cliente} → ${document.getElementById('editCli').value.trim()}`);
    if(old.veiculo !== document.getElementById('editVeic').value.trim()) auditLog.push(`Veículo: ${old.veiculo} → ${document.getElementById('editVeic').value.trim()}`);
    if(old.blindagem !== document.getElementById('editBlind').value.trim()) auditLog.push(`Blindagem: ${old.blindagem} → ${document.getElementById('editBlind').value.trim()}`);
    if(old.prazoEmissaoDB !== document.getElementById('editPrazo').value) auditLog.push(`Prazo: ${old.prazoEmissaoDB} → ${document.getElementById('editPrazo').value}`);
    if(old.emissaoDB !== document.getElementById('editEmissao').value) auditLog.push(`Emissão: ${old.emissaoDB} → ${document.getElementById('editEmissao').value}`);
    if(old.observacoes !== document.getElementById('editObs').value.trim()) auditLog.push(`Obs alteradas`);
-
    DB.declaracoes[idx].cliente = document.getElementById('editCli').value.trim();
    DB.declaracoes[idx].veiculo = document.getElementById('editVeic').value.trim();
    DB.declaracoes[idx].blindagem = document.getElementById('editBlind').value.trim();
@@ -1149,12 +1069,10 @@ window.salvarEdicaoOS = async function(os) {
    DB.declaracoes[idx].observacoes = document.getElementById('editObs').value.trim();
    DB.declaracoes[idx].lastModified = new Date().toISOString();
    DB.declaracoes[idx].modifiedBy = currentUser.name || currentUser.email;
-
    if(auditLog.length > 0) {
        if(!DB.declaracoes[idx].audit) DB.declaracoes[idx].audit = [];
        DB.declaracoes[idx].audit.push({ date: new Date().toISOString(), user: currentUser.name || currentUser.email, action: auditLog.join(' | ') });
    }
-
    await saveDB('all');
    closeModal();
    openDetail(DB.declaracoes[idx]);
@@ -1193,7 +1111,6 @@ window.salvarEdicaoExc = async function(os) {
    if(idx < 0) return;
    const old = DB.autorizacoes[idx];
    const auditLog = [];
-
    if(old.cliente !== document.getElementById('editExcCli').value.trim()) auditLog.push(`Cliente: ${old.cliente} → ${document.getElementById('editExcCli').value.trim()}`);
    if(old.vendedor !== document.getElementById('editExcVend').value.trim()) auditLog.push(`Vendedor: ${old.vendedor} → ${document.getElementById('editExcVend').value.trim()}`);
    if(old.modelo !== document.getElementById('editExcModelo').value.trim()) auditLog.push(`Modelo: ${old.modelo} → ${document.getElementById('editExcModelo').value.trim()}`);
@@ -1201,7 +1118,6 @@ window.salvarEdicaoExc = async function(os) {
    if(old.prazoEmissao !== document.getElementById('editExcPrazo').value) auditLog.push(`Prazo: ${old.prazoEmissao} → ${document.getElementById('editExcPrazo').value}`);
    if(old.dataEmissao !== document.getElementById('editExcEmissao').value) auditLog.push(`Emissão: ${old.dataEmissao} → ${document.getElementById('editExcEmissao').value}`);
    if(old.observacao !== document.getElementById('editExcObs').value.trim()) auditLog.push(`Obs alteradas`);
-
    DB.autorizacoes[idx].cliente = document.getElementById('editExcCli').value.trim();
    DB.autorizacoes[idx].vendedor = document.getElementById('editExcVend').value.trim();
    DB.autorizacoes[idx].modelo = document.getElementById('editExcModelo').value.trim();
@@ -1211,40 +1127,204 @@ window.salvarEdicaoExc = async function(os) {
    DB.autorizacoes[idx].observacao = document.getElementById('editExcObs').value.trim();
    DB.autorizacoes[idx].lastModified = new Date().toISOString();
    DB.autorizacoes[idx].modifiedBy = currentUser.name || currentUser.email;
-
    if(auditLog.length > 0) {
        if(!DB.autorizacoes[idx].audit) DB.autorizacoes[idx].audit = [];
        DB.autorizacoes[idx].audit.push({ date: new Date().toISOString(), user: currentUser.name || currentUser.email, action: auditLog.join(' | ') });
    }
-
    await saveDB('all');
    closeModal();
    openExcDetail(DB.autorizacoes[idx]);
    toast('Autorização atualizada com sucesso!');
 };
 
-window.toggleDbSelection = function(os, checked) {
-    if(checked) selectedDbs.add(String(os)); else selectedDbs.delete(String(os));
-    updateBulkBarDbs();
+// =============== SELEÇÃO EM MASSA ===============
+window.selectPageDbs = function() {
+    const all = getFiltered();
+    const start = (tableState.page - 1) * tableState.perPage;
+    const rows = all.slice(start, start + tableState.perPage);
+    rows.forEach(r => selectedDbs.add(String(r.os)));
+    renderTable();
+    toast(`✔️ ${rows.length} OS da página selecionadas`);
 };
+
+window.selectPageExc = function() {
+    const filtered = getFilteredExc();
+    const start = (excState.page - 1) * excState.perPage;
+    const rows = filtered.slice(start, start + excState.perPage);
+    rows.forEach(r => selectedExc.add(String(r.os)));
+    renderExcTable();
+    toast(`✔️ ${rows.length} Aut. da página selecionadas`);
+};
+
+window.selectAllDbs = function() {
+    const all = getFiltered();
+    if(all.length === 0) { toast('Nada para selecionar.','err'); return; }
+    all.forEach(r => selectedDbs.add(String(r.os)));
+    renderTable();
+    toast(`✔️ ${all.length} OS (todas do filtro) selecionadas`);
+};
+
+window.selectAllExc = function() {
+    const filtered = getFilteredExc();
+    if(filtered.length === 0) { toast('Nada para selecionar.','err'); return; }
+    filtered.forEach(r => selectedExc.add(String(r.os)));
+    renderExcTable();
+    toast(`✔️ ${filtered.length} Aut. (todas do filtro) selecionadas`);
+};
+
+window.toggleDbRow = function(os, inputEl) {
+    const key = String(os);
+    const row = inputEl.closest('tr');
+    if(inputEl.checked) {
+        selectedDbs.add(key);
+        if(row) row.classList.add('selected-row');
+    } else {
+        selectedDbs.delete(key);
+        if(row) row.classList.remove('selected-row');
+    }
+    updateBulkBarDbs();
+    updateSelectionInfoDbs();
+};
+
+window.toggleExcRow = function(os, inputEl) {
+    const key = String(os);
+    const row = inputEl.closest('tr');
+    if(inputEl.checked) {
+        selectedExc.add(key);
+        if(row) row.classList.add('selected-row');
+    } else {
+        selectedExc.delete(key);
+        if(row) row.classList.remove('selected-row');
+    }
+    updateBulkBarExc();
+    updateSelectionInfoExc();
+};
+
 window.clearSelectionDbs = function() {
     selectedDbs.clear();
     renderTable();
 };
+
+window.clearSelectionExc = function() {
+    selectedExc.clear();
+    renderExcTable();
+};
+
+window.toggleAllDbsOnPage = function(inputEl) {
+    const all = getFiltered();
+    const start = (tableState.page - 1) * tableState.perPage;
+    const rows = all.slice(start, start + tableState.perPage);
+    if(inputEl.checked) {
+        rows.forEach(r => selectedDbs.add(String(r.os)));
+    } else {
+        rows.forEach(r => selectedDbs.delete(String(r.os)));
+    }
+    renderTable();
+};
+
+window.toggleAllExcOnPage = function(inputEl) {
+    const filtered = getFilteredExc();
+    const start = (excState.page - 1) * excState.perPage;
+    const rows = filtered.slice(start, start + excState.perPage);
+    if(inputEl.checked) {
+        rows.forEach(r => selectedExc.add(String(r.os)));
+    } else {
+        rows.forEach(r => selectedExc.delete(String(r.os)));
+    }
+    renderExcTable();
+};
+
+function getFilteredExc() {
+    const recs = visibleExc();
+    let filtered = recs;
+    const q = excState.search.toLowerCase().trim();
+    if(q) filtered = filtered.filter(r => Object.values(r).map(v=>String(v==null?'':v)).join(' ').toLowerCase().includes(q));
+    if(excState.vend) filtered = filtered.filter(r => r.vendedor === excState.vend);
+    if(excState.status) filtered = filtered.filter(r => r.exercito === excState.status);
+    if(excState.dates && excState.dates.length > 0) {
+        filtered = filtered.filter(r => {
+            const recDates = [r.envioSicovab, r.prazoEmissao, r.dataEmissao, r.dataColeta, r.prazo9dias, r.dtaPrev07, r.dtaPrev09].filter(Boolean);
+            return recDates.some(d => excState.dates.includes(d));
+        });
+    }
+    if(excState.dateField || excState.date || excState.month || excState.year || excState.from || excState.to) {
+        filtered = filtered.filter(r => matchTemporal(getExcDates(r, excState.dateField), excState));
+    }
+    return filtered;
+}
+
 function updateBulkBarDbs() {
     const bar = document.getElementById('bulk-actions-dbs');
     const countSpan = document.getElementById('bulk-count-dbs');
+    if(!bar) return;
     if(selectedDbs.size > 0) {
         bar.classList.remove('hidden');
         countSpan.textContent = selectedDbs.size;
     } else {
         bar.classList.add('hidden');
     }
+    updateSelectionInfoDbs();
 }
+
+function updateBulkBarExc() {
+    const bar = document.getElementById('bulk-actions-exc');
+    const countSpan = document.getElementById('bulk-count-exc');
+    if(!bar) return;
+    if(selectedExc.size > 0) {
+        bar.classList.remove('hidden');
+        countSpan.textContent = selectedExc.size;
+    } else {
+        bar.classList.add('hidden');
+    }
+    updateSelectionInfoExc();
+}
+
+function updateSelectionInfoDbs() {
+    const elC = document.getElementById('sel-count-dbs');
+    const elT = document.getElementById('sel-total-dbs');
+    if(elC) elC.textContent = selectedDbs.size;
+    if(elT) elT.textContent = getFiltered().length;
+    updateActiveFiltersIndicatorDbs();
+}
+
+function updateSelectionInfoExc() {
+    const elC = document.getElementById('sel-count-exc');
+    const elT = document.getElementById('sel-total-exc');
+    if(elC) elC.textContent = selectedExc.size;
+    if(elT) elT.textContent = getFilteredExc().length;
+    updateActiveFiltersIndicatorExc();
+}
+
+function updateActiveFiltersIndicatorDbs() {
+    const count = [
+        tableState.search, tableState.vend, tableState.cli, tableState.blind, tableState.status,
+        tableState.dateField, tableState.date, tableState.month, tableState.year, tableState.from, tableState.to
+    ].filter(Boolean).length;
+    const badge = document.getElementById('active-filters-dbs');
+    const cnt = document.getElementById('active-filters-count-dbs');
+    if(badge && cnt) {
+        if(count > 0) { badge.style.display = 'inline'; cnt.textContent = count; }
+        else { badge.style.display = 'none'; }
+    }
+}
+
+function updateActiveFiltersIndicatorExc() {
+    const count = [
+        excState.search, excState.vend, excState.status,
+        (excState.dates && excState.dates.length > 0) ? 'y' : '',
+        excState.dateField, excState.date, excState.month, excState.year, excState.from, excState.to
+    ].filter(Boolean).length;
+    const badge = document.getElementById('active-filters-exc');
+    const cnt = document.getElementById('active-filters-count-exc');
+    if(badge && cnt) {
+        if(count > 0) { badge.style.display = 'inline'; cnt.textContent = count; }
+        else { badge.style.display = 'none'; }
+    }
+}
+
 window.bulkUpdateDbs = async function(field) {
     if(selectedDbs.size === 0) return;
     if(!confirm(`Deseja marcar ${selectedDbs.size} OS como "${field === 'sicovabEnvio' ? 'Enviada ao Sicovab' : 'Emitida'}" com a data de hoje?`)) return;
-    
     const today = todayISO();
     DB.declaracoes.forEach(r => {
         if(selectedDbs.has(String(r.os))) {
@@ -1253,7 +1333,6 @@ window.bulkUpdateDbs = async function(field) {
             r.modifiedBy = currentUser.name || currentUser.email;
         }
     });
-    
     await saveDB('all');
     toast(`${selectedDbs.size} OS atualizadas com sucesso!`);
     selectedDbs.clear();
@@ -1261,28 +1340,9 @@ window.bulkUpdateDbs = async function(field) {
     renderDashboard();
 };
 
-window.toggleExcSelection = function(os, checked) {
-    if(checked) selectedExc.add(String(os)); else selectedExc.delete(String(os));
-    updateBulkBarExc();
-};
-window.clearSelectionExc = function() {
-    selectedExc.clear();
-    renderExcTable();
-};
-function updateBulkBarExc() {
-    const bar = document.getElementById('bulk-actions-exc');
-    const countSpan = document.getElementById('bulk-count-exc');
-    if(selectedExc.size > 0) {
-        bar.classList.remove('hidden');
-        countSpan.textContent = selectedExc.size;
-    } else {
-        bar.classList.add('hidden');
-    }
-}
 window.bulkUpdateExc = async function(field) {
     if(selectedExc.size === 0) return;
     if(!confirm(`Deseja marcar ${selectedExc.size} Autorizações como "${field === 'envioSicovab' ? 'Enviada ao Sicovab' : 'Emitida'}" com a data de hoje?`)) return;
-    
     const today = todayISO();
     DB.autorizacoes.forEach(r => {
         if(selectedExc.has(String(r.os))) {
@@ -1291,7 +1351,6 @@ window.bulkUpdateExc = async function(field) {
             r.modifiedBy = currentUser.name || currentUser.email;
         }
     });
-    
     await saveDB('all');
     toast(`${selectedExc.size} Autorizações atualizadas com sucesso!`);
     selectedExc.clear();
@@ -1324,42 +1383,23 @@ function refreshActiveScreen(){
 window.exportEmbeddedHTML=async function(){
   try{
     if(getCloudBaseUrl())await pushToCloud('all');
-    const snapshotData={
-      exportedAt:new Date().toISOString(),
-      usuarios:DB.usuarios,
-      deletedUsers:DB.deletedUsers||[],
-      declaracoes:DB.declaracoes,
-      autorizacoes:DB.autorizacoes,
-      config:DB.config,
-      lastUpdate:DB.lastUpdate,
-      lastFiles:DB.lastFiles
-    };
+    const snapshotData={ exportedAt:new Date().toISOString(), usuarios:DB.usuarios, deletedUsers:DB.deletedUsers||[], declaracoes:DB.declaracoes, autorizacoes:DB.autorizacoes, config:DB.config, lastUpdate:DB.lastUpdate, lastFiles:DB.lastFiles };
     const encryptedString=encryptVaultPayload(snapshotData);
     const dataScript=document.getElementById('cbs-embedded-data');
     if(dataScript){dataScript.textContent=encryptedString}
     const clone=document.documentElement.cloneNode(true);
-    const cLogin=clone.querySelector('#loginView');
-    const cApp=clone.querySelector('#appView');
-    const cSb=clone.querySelector('#sidebar');
-    const cBd=clone.querySelector('#sidebarBackdrop');
-    if(cLogin)cLogin.classList.remove('hidden');
-    if(cApp)cApp.classList.add('hidden');
-    if(cSb)cSb.classList.remove('open');
-    if(cBd)cBd.classList.remove('open');
-    const cEmail=clone.querySelector('#loginEmail');
-    const cPass=clone.querySelector('#loginPass');
-    if(cEmail)cEmail.value='';
-    if(cPass)cPass.value='';
+    const cLogin=clone.querySelector('#loginView'); const cApp=clone.querySelector('#appView');
+    const cSb=clone.querySelector('#sidebar'); const cBd=clone.querySelector('#sidebarBackdrop');
+    if(cLogin)cLogin.classList.remove('hidden'); if(cApp)cApp.classList.add('hidden');
+    if(cSb)cSb.classList.remove('open'); if(cBd)cBd.classList.remove('open');
+    const cEmail=clone.querySelector('#loginEmail'); const cPass=clone.querySelector('#loginPass');
+    if(cEmail)cEmail.value=''; if(cPass)cPass.value='';
     ['#modalRoot','#toastRoot','#tbodyRec','#excBody','#uniBody','#tbodyUsers','#dashPipeline','#dashVendBody','#dashAlertBody'].forEach(sel=>{const el=clone.querySelector(sel);if(el)el.innerHTML=''});
     [['#boxVend','chVend'],['#boxStatus','chStatus'],['#boxMes','chMes'],['#boxLeadTime','chLeadTime'],['#boxBlind','chBlind'],['#boxModelos','chModelos'],['#boxCli','chCli'],['#boxExcStatus','chExcStatus']].forEach(([boxSel,cId])=>{const box=clone.querySelector(boxSel);if(box)box.innerHTML='<canvas id="'+cId+'"></canvas>'});
     const finalHtml='<!DOCTYPE html>\n'+clone.outerHTML;
     const blob=new Blob([finalHtml],{type:'text/html;charset=utf-8'});
-    const url=URL.createObjectURL(blob);
-    const a=document.createElement('a');
-    a.href=url;
-    a.download='index.html';
-    a.click();
-    URL.revokeObjectURL(url);
+    const url=URL.createObjectURL(blob); const a=document.createElement('a');
+    a.href=url; a.download='index.html'; a.click(); URL.revokeObjectURL(url);
     toast('index.html gerado com base criptografada e perfis salvos!');
   }catch(e){console.error(e);toast('Erro ao gerar HTML criptografado.','err')}
 };
@@ -1367,32 +1407,23 @@ window.exportEmbeddedHTML=async function(){
 window.testCloudConnection = async function(){
   const base = getCloudBaseUrl();
   if(!base){ toast('❌ Cofre Nuvem NÃO configurado neste aparelho. Abra 🔐 Cofre Nuvem.','err'); return; }
-  if(!/firebaseio\.com|firebasedatabase\.app/.test(base)){
-    toast('❌ URL não parece Firebase RTDB. Deve terminar em firebaseio.com ou firebasedatabase.app','err');
-    return;
-  }
+  if(!/firebaseio\.com|firebasedatabase\.app/.test(base)){ toast('❌ URL não parece Firebase RTDB. Deve terminar em firebaseio.com ou firebasedatabase.app','err'); return; }
   toast('🔍 Testando conexão com Firebase...');
   try{
     const url = getCloudEndpoint('cbs_users_enc') + '?t=' + Date.now();
     const r = await fetchWithTimeout(url, {cache:'no-store'}, 6000);
     if(!r){ toast('❌ Timeout. Verifique internet ou URL.','err'); return; }
-    if(r.status === 401 || r.status === 403){
-      toast('❌ Firebase recusou (' + r.status + '). Regras (Rules) do Firebase estão bloqueando. Cole as regras do Cofre.','err');
-      return;
-    }
+    if(r.status === 401 || r.status === 403){ toast('❌ Firebase recusou (' + r.status + '). Regras (Rules) do Firebase estão bloqueando.','err'); return; }
     if(!r.ok){ toast('❌ HTTP ' + r.status + ' — URL provavelmente errada.','err'); return; }
     toast('✅ Firebase respondeu OK. Conexão e regras estão corretas.');
-    console.log('[CBS] teste conexão OK. Body:', await r.text());
-  }catch(e){
-    toast('❌ Erro: ' + e.message, 'err');
-  }
+  }catch(e){ toast('❌ Erro: ' + e.message, 'err'); }
 };
 
 window.exportDatabaseJSON=function(){const snapshotData={exportedAt:new Date().toISOString(),usuarios:DB.usuarios,deletedUsers:DB.deletedUsers||[],declaracoes:DB.declaracoes,autorizacoes:DB.autorizacoes,config:DB.config,lastUpdate:DB.lastUpdate,lastFiles:DB.lastFiles};const blob=new Blob([JSON.stringify(snapshotData)],{type:'application/json;charset=utf-8'});const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download='cbs_database_backup.json';a.click();URL.revokeObjectURL(url);toast('Backup exportado!')};
 async function handleRestoreDatabaseJSON(file){if(!file)return;const reader=new FileReader();reader.onload=async e=>{try{const parsed=decryptVaultPayload(e.target.result);if(!parsed||(!Array.isArray(parsed.declaracoes)&&!Array.isArray(parsed.autorizacoes))){toast('Arquivo JSON inválido.','err');return}if(Array.isArray(parsed.declaracoes))DB.declaracoes=parsed.declaracoes;if(Array.isArray(parsed.autorizacoes))DB.autorizacoes=parsed.autorizacoes;if(Array.isArray(parsed.usuarios))DB.usuarios=mergeUsersVault(DB.usuarios,parsed.usuarios);if(parsed.lastUpdate)DB.lastUpdate={...DB.lastUpdate,...parsed.lastUpdate};if(parsed.lastFiles)DB.lastFiles={...DB.lastFiles,...parsed.lastFiles};await saveDB('all');refreshActiveScreen();toast('Base de dados restaurada e salva com sucesso!')}catch(err){toast('Erro ao ler arquivo JSON.','err')}};reader.readAsText(file)}
 
 function generateRandomVaultKey(){const chars='ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789';let res='CBS_VAULT_';for(let i=0;i<24;i++)res+=chars.charAt(Math.floor(Math.random()*chars.length));return res}
-window.openCloudConfigModal=function(){const curUrl=getCloudBaseUrl();const curKey=getCloudVaultKey()||generateRandomVaultKey();openModal('<div class="modal-head"><h3>🔐 Cofre Privado na Nuvem (Sincronização 100% Online)</h3><button class="modal-close" onclick="closeModal()">✕</button></div><div class="modal-body"><p style="font-size:11.5px;color:var(--text2);line-height:1.5;margin-bottom:12px">Com o <b>Cofre na Nuvem (Firebase)</b> ativo, qualquer senha alterada no celular, promoção de Gerente ou planilha importada atualiza <b>instantaneamente em todos os aparelhos</b>.</p><div class="fg"><label>1. URL do Firebase Realtime Database</label><input type="url" id="inpCloudUrl" placeholder="https://seu-projeto-default-rtdb.firebaseio.com" value="'+esc(curUrl)+'"></div><div class="fg"><label>2. Chave Secreta do Cofre (Token Privado da Empresa)</label><div style="display:flex;gap:6px"><input type="text" id="inpVaultKey" class="mono" value="'+esc(curKey)+'" oninput="updateFirebaseRulesPreview()"><button type="button" class="btn btn-ghost btn-sm" id="btnGenNewKey">Gerar Nova</button></div></div><div class="fg" style="margin-top:12px"><label>3. Regra de Bloqueio para colar na aba "Regras (Rules)" do Firebase:</label><pre id="firebaseRulesPre" class="mono" style="background:var(--surface2);border:1px solid var(--border);padding:10px;border-radius:8px;font-size:10.5px;overflow-x:auto;user-select:all"></pre></div></div><div class="modal-foot"><button class="btn btn-ghost" onclick="closeModal()">Cancelar</button><button class="btn btn-primary" id="btnSaveCloudUrl">Salvar Cofre e Sincronizar Agora</button></div>',false,'narrow');window.updateFirebaseRulesPreview=function(){const k=($('#inpVaultKey').value||'').trim().replace(/[^a-zA-Z0-9_-]/g,'')||'CHAVE_SECRETA';$('#firebaseRulesPre').textContent='{\n  "rules": {\n    ".read": false,\n    ".write": false,\n    "vaults": {\n      "'+k+'": {\n        ".read": true,\n        ".write": true\n      }\n    }\n  }\n}'};$('#btnGenNewKey').onclick=()=>{document.getElementById('inpVaultKey').value=generateRandomVaultKey();updateFirebaseRulesPreview()};updateFirebaseRulesPreview();$('#btnSaveCloudUrl').onclick=async()=>{const val=$('#inpCloudUrl').value.trim().replace(/\/+$/,'');const vKey=$('#inpVaultKey').value.trim().replace(/[^a-zA-Z0-9_-]/g,'');DB.config.cloudUrl=val;DB.config.vaultKey=vKey;try{localStorage.setItem(CLOUD_CFG_KEY,val);localStorage.setItem(CLOUD_SECRET_KEY,vKey)}catch(e){}await saveLocalOnly();closeModal();if(val){const ok=await pushToCloud('all');if(ok){toast('Cofre privado conectado! Todos os aparelhos sincronizados!');iniciarTempoReal()}else toast('Salvo! Publique as Regras no Firebase para liberar a sincronização.','err')}else{toast('Nuvem desativada.')}updateBarRender()}};
+window.openCloudConfigModal=function(){const curUrl=getCloudBaseUrl();const curKey=getCloudVaultKey()||generateRandomVaultKey();openModal('<div class="modal-head"><h3>🔐 Cofre Privado na Nuvem (Sincronização 100% Online)</h3><button class="modal-close" onclick="closeModal()">✕</button></div><div class="modal-body"><div class="fg"><label>1. URL do Firebase Realtime Database</label><input type="url" id="inpCloudUrl" placeholder="https://seu-projeto-default-rtdb.firebaseio.com" value="'+esc(curUrl)+'"></div><div class="fg"><label>2. Chave Secreta do Cofre (Token Privado da Empresa)</label><div style="display:flex;gap:6px"><input type="text" id="inpVaultKey" class="mono" value="'+esc(curKey)+'" oninput="updateFirebaseRulesPreview()"><button type="button" class="btn btn-ghost btn-sm" id="btnGenNewKey">Gerar Nova</button></div></div><div class="fg" style="margin-top:12px"><label>3. Regra de Bloqueio para colar na aba "Regras (Rules)" do Firebase:</label><pre id="firebaseRulesPre" class="mono" style="background:var(--surface2);border:1px solid var(--border);padding:10px;border-radius:8px;font-size:10.5px;overflow-x:auto;user-select:all"></pre></div></div><div class="modal-foot"><button class="btn btn-ghost" onclick="closeModal()">Cancelar</button><button class="btn btn-primary" id="btnSaveCloudUrl">Salvar Cofre e Sincronizar Agora</button></div>',false,'narrow');window.updateFirebaseRulesPreview=function(){const k=($('#inpVaultKey').value||'').trim().replace(/[^a-zA-Z0-9_-]/g,'')||'CHAVE_SECRETA';$('#firebaseRulesPre').textContent='{\n  "rules": {\n    ".read": false,\n    ".write": false,\n    "vaults": {\n      "'+k+'": {\n        ".read": true,\n        ".write": true\n      }\n    }\n  }\n}'};$('#btnGenNewKey').onclick=()=>{document.getElementById('inpVaultKey').value=generateRandomVaultKey();updateFirebaseRulesPreview()};updateFirebaseRulesPreview();$('#btnSaveCloudUrl').onclick=async()=>{const val=$('#inpCloudUrl').value.trim().replace(/\/+$/,'');const vKey=$('#inpVaultKey').value.trim().replace(/[^a-zA-Z0-9_-]/g,'');DB.config.cloudUrl=val;DB.config.vaultKey=vKey;try{localStorage.setItem(CLOUD_CFG_KEY,val);localStorage.setItem(CLOUD_SECRET_KEY,vKey)}catch(e){}await saveLocalOnly();closeModal();if(val){const ok=await pushToCloud('all');if(ok){toast('Cofre privado conectado! Todos os aparelhos sincronizados!');iniciarTempoReal()}else toast('Salvo! Publique as Regras no Firebase para liberar a sincronização.','err')}else{toast('Nuvem desativada.')}updateBarRender()}};
 
 function getDbsDates(r,field){if(!r)return[];if(field)return r[field]?[r[field]]:[];return[r.autorizacao,r.solicitacaoTermo,r.prazoTermo,r.emissaoTermo,r.engenhariaAss,r.procAss,r.sicovabEnvio,r.prazoEmissaoDB,r.emissaoDB].filter(Boolean)}
 function getExcDates(r,field){if(!r)return[];if(field)return r[field]?[r[field]]:[];return[r.dataColeta,r.envioSicovab,r.prazoEmissao,r.prazo9dias,r.dtaPrev07,r.dtaPrev09,r.dataEmissao].filter(Boolean)}
@@ -1413,17 +1444,13 @@ function ensureVendedorUser(rawVend){
   if(!rawVend)return;
   const v=String(rawVend).trim();
   if(!v||v==='—'||v==='-')return;
-  
-  // Verifica se já existe pelo nome normalizado ou prefixo do email
   const normV = normIdentity(v);
   const exists = DB.usuarios.some(u => {
      const uNameNorm = normIdentity(u.name);
      const uPrefixNorm = normIdentity(vendName(u.email));
      return uNameNorm === normV || uPrefixNorm === normV;
   });
-  
   if(exists) return;
-
   const isEmail=v.includes('@');
   const email=isEmail?v.toLowerCase():(v.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]+/g,'.').replace(/^\.+|\.+$/g,'')+'@conceptbesafe.com.br');
   if((DB.deletedUsers||[]).includes(email))return;
@@ -1437,73 +1464,37 @@ function saveSignedSession(user){const payload={email:user.email.toLowerCase(),s
 function verifySignedSession(){try{const raw=sessionStorage.getItem(SES_KEY)||localStorage.getItem(SES_KEY);if(!raw)return null;const parsed=JSON.parse(raw);if(!parsed||!parsed.email||!parsed.sig||!parsed.ts)return null;if(Date.now()-parsed.ts>SESSION_TIMEOUT_MS){localStorage.removeItem(SES_KEY);sessionStorage.removeItem(SES_KEY);return null}const u=DB.usuarios.find(x=>x.email.toLowerCase()===parsed.email.toLowerCase());if(!u)return null;if(makeSessionSignature(u)!==parsed.sig)return null;return u}catch(e){return null}}
 function resetInactivityWatchdog(){if(!currentUser)return;saveSignedSession(currentUser);clearTimeout(inactivityTimer);inactivityTimer=setTimeout(()=>{if(currentUser){logout();toast('Sessão encerrada por inatividade para sua segurança.','err')}},SESSION_TIMEOUT_MS)}
 
-function passVariants(p){
-  const raw=String(p==null?'':p);
-  const clean=raw.trim();
-  const variants=[clean];
-  if(clean.length>0)variants.push(clean[0].toLowerCase()+clean.slice(1));
-  variants.push(clean.toLowerCase());
-  const noSpace=clean.replace(/\s+/g,'');
-  if(noSpace&&noSpace!==clean)variants.push(noSpace);
-  return[...new Set(variants)];
-}
-function userPassMatches(u,passRaw){
-  if(!u||!u.pass)return false;
-  const vs=passVariants(passRaw);
-  for(const v of vs){if(u.pass===hash(v))return true}
-  if(u.mustChange){for(const v of vs){if(v==='123456')return true}}
-  return false;
-}
-function findLoginCandidates(e){
-  return DB.usuarios.filter(x=>
-    x.email.toLowerCase()===e||
-    vendName(x.email).toLowerCase()===e||
-    normIdentity(x.name)===normIdentity(e)
-  ).sort((a,b)=>(ROLE_RANK[b.role]||1)-(ROLE_RANK[a.role]||1));
-}
+function passVariants(p){const raw=String(p==null?'':p);const clean=raw.trim();const variants=[clean];if(clean.length>0)variants.push(clean[0].toLowerCase()+clean.slice(1));variants.push(clean.toLowerCase());const noSpace=clean.replace(/\s+/g,'');if(noSpace&&noSpace!==clean)variants.push(noSpace);return[...new Set(variants)];}
+function userPassMatches(u,passRaw){if(!u||!u.pass)return false;const vs=passVariants(passRaw);for(const v of vs){if(u.pass===hash(v))return true}if(u.mustChange){for(const v of vs){if(v==='123456')return true}}return false;}
+function findLoginCandidates(e){return DB.usuarios.filter(x=>x.email.toLowerCase()===e||vendName(x.email).toLowerCase()===e||normIdentity(x.name)===normIdentity(e)).sort((a,b)=>(ROLE_RANK[b.role]||1)-(ROLE_RANK[a.role]||1));}
 function tryLogin(emailRaw,passRaw){
   try{localStorage.removeItem(LOCKOUT_KEY)}catch(e){}
   const e=String(emailRaw||'').trim().toLowerCase();
   const pClean=String(passRaw||'').trim();
-
-  if(!e||!pClean){
-    return{ok:false,msg:'Preencha o e-mail e a senha.'};
-  }
-
+  if(!e||!pClean){ return{ok:false,msg:'Preencha o e-mail e a senha.'}; }
   if(e==='admin@conceptbesafe.com.br'||e==='admin'){
     ensureAdmin();
     const adminUser=DB.usuarios.find(x=>x.email.toLowerCase()==='admin@conceptbesafe.com.br');
     const isAdminPass=(pClean==='admin123'||userPassMatches(adminUser,passRaw));
     if(isAdminPass&&adminUser){
-      adminUser.role='admin';
-      adminUser.mustChange=false;
-      currentUser=adminUser;
-      saveSignedSession(currentUser);
-      resetInactivityWatchdog();
+      adminUser.role='admin'; adminUser.mustChange=false;
+      currentUser=adminUser; saveSignedSession(currentUser); resetInactivityWatchdog();
       return{ok:true,mustChange:false};
     }
   }
-
   const candidates=findLoginCandidates(e);
   const u=candidates.find(x=>userPassMatches(x,passRaw));
-  if(!u){
-    return{ok:false,msg:'E-mail ou senha incorretos.'};
-  }
-  currentUser=u;
-  saveSignedSession(u);
-  resetInactivityWatchdog();
+  if(!u){ return{ok:false,msg:'E-mail ou senha incorretos.'}; }
+  currentUser=u; saveSignedSession(u); resetInactivityWatchdog();
   return{ok:true,mustChange:u.mustChange===true};
 }
 
 async function tryCloudLogin(emailRaw,passRaw){
-  const base=getCloudBaseUrl();
-  if(!base)return null;
-  const vKey=getCloudVaultKey();
-  const e=String(emailRaw||'').trim().toLowerCase();
+  const base=getCloudBaseUrl(); if(!base)return null;
+  const vKey=getCloudVaultKey(); const e=String(emailRaw||'').trim().toLowerCase();
   try{
     const isFirebase=base.includes('firebaseio.com')||base.includes('firebasedatabase.app');
-    let remoteUsers=null;
-    const tsParam='?t='+Date.now();
+    let remoteUsers=null; const tsParam='?t='+Date.now();
     if(isFirebase){
       const r=await fetchWithTimeout(getCloudEndpoint('cbs_users_enc')+tsParam,{cache:'no-store'},4000);
       const raw=r&&r.ok?await r.json().catch(()=>null):null;
@@ -1517,11 +1508,7 @@ async function tryCloudLogin(emailRaw,passRaw){
       if(dec&&Array.isArray(dec.usuarios))remoteUsers=dec.usuarios;
     }
     if(!Array.isArray(remoteUsers)||!remoteUsers.length)return null;
-    const candidates=remoteUsers.filter(x=>
-      String(x.email||'').trim().toLowerCase()===e||
-      vendName(x.email).toLowerCase()===e||
-      normIdentity(x.name)===normIdentity(e)
-    ).sort((a,b)=>(ROLE_RANK[b.role]||1)-(ROLE_RANK[a.role]||1));
+    const candidates=remoteUsers.filter(x=>String(x.email||'').trim().toLowerCase()===e||vendName(x.email).toLowerCase()===e||normIdentity(x.name)===normIdentity(e)).sort((a,b)=>(ROLE_RANK[b.role]||1)-(ROLE_RANK[a.role]||1));
     return candidates.find(x=>userPassMatches(x,passRaw))||null;
   }catch(err){return null}
 }
@@ -1533,21 +1520,14 @@ function normIdentity(s){return String(s||'').toLowerCase().normalize('NFD').rep
 function matchVendorIdentity(recordVendorRaw,userOrIdentifier){
   const rv=String(recordVendorRaw||'').trim();
   if(!rv)return false;
-  const rvLower=rv.toLowerCase();
-  const rvPrefix=vendName(rvLower);
-  const rvNorm=normIdentity(rv);
-  const rvPrefixNorm=normIdentity(rvPrefix);
+  const rvLower=rv.toLowerCase(); const rvPrefix=vendName(rvLower);
+  const rvNorm=normIdentity(rv); const rvPrefixNorm=normIdentity(rvPrefix);
   let uObj=null;
   if(typeof userOrIdentifier==='object'&&userOrIdentifier!==null){uObj=userOrIdentifier}
-  else{
-    const idStr=String(userOrIdentifier||'').trim().toLowerCase();
-    uObj=DB.usuarios.find(u=>u.email.toLowerCase()===idStr||normIdentity(u.name)===normIdentity(idStr))||{email:idStr,name:idStr};
-  }
+  else{ const idStr=String(userOrIdentifier||'').trim().toLowerCase(); uObj=DB.usuarios.find(u=>u.email.toLowerCase()===idStr||normIdentity(u.name)===normIdentity(idStr))||{email:idStr,name:idStr}; }
   if(!uObj)return false;
-  const uEmail=String(uObj.email||'').trim().toLowerCase();
-  const uName=normIdentity(uObj.name||'');
-  const uPrefix=vendName(uEmail);
-  const uPrefixNorm=normIdentity(uPrefix);
+  const uEmail=String(uObj.email||'').trim().toLowerCase(); const uName=normIdentity(uObj.name||'');
+  const uPrefix=vendName(uEmail); const uPrefixNorm=normIdentity(uPrefix);
   if(uEmail&&rvLower===uEmail)return true;
   if(uName&&rvNorm===uName)return true;
   if(uPrefixNorm&&rvPrefixNorm===uPrefixNorm)return true;
@@ -1568,7 +1548,7 @@ function handleFileAut(file){if(!file)return;pendingFileNameAut=file.name;const 
 async function doImportAut(){if(!pendingAut)return;const count=pendingAut.length;createBackup('import-aut');if(importModeAut==='replace'){DB.autorizacoes=pendingAut}else if(importModeAut==='merge'){const m=new Map(DB.autorizacoes.map(r=>[String(r.os),r]));pendingAut.forEach(r=>{const k=String(r.os);const existing=m.get(k);if(existing){const manualNotes=existing.manualNotes||'';const history=existing.history||[];const audit=existing.audit||[];m.set(k,{...existing,...r,manualNotes,history,audit,lastModified:new Date().toISOString(),modifiedBy:'import'})}else{m.set(k,{...r,manualNotes:'',history:[],audit:[],lastModified:new Date().toISOString(),modifiedBy:'import'})}});DB.autorizacoes=Array.from(m.values())}else{const ex=new Set(DB.autorizacoes.map(r=>String(r.os)));pendingAut.forEach(r=>{if(!ex.has(String(r.os)))DB.autorizacoes.push({...r,manualNotes:'',history:[],audit:[],lastModified:new Date().toISOString(),modifiedBy:'import'})})}const vends=[...new Set(DB.autorizacoes.map(r=>r.vendedor).filter(Boolean))];vends.forEach(ensureVendedorUser);DB.lastUpdate.aut=new Date().toISOString();DB.lastFiles.aut={name:pendingFileNameAut||'Autorizacoes.xlsx',count:DB.autorizacoes.length};pendingAut=null;pendingFileNameAut='';$('#importPanelAut').classList.add('hidden');$('#dropZoneAut').classList.remove('hidden');$('#fileInputAut').value='';await saveDB('all');populateYearSelects();updateBarRender();toast(count+' autorizações pendentes importadas e sincronizadas!')}
 
 function exportExcel(){const recs=getFiltered();if(!recs.length){toast('Nada para exportar.','err');return}const data=recs.map(r=>({'OS':r.os,'Veículo':r.veiculo,'Blindagem':r.blindagem,'Cliente':r.cliente,'Vendedor':r.vendedor,'Autorização':fmtDate(r.autorizacao),'Emi. Termo':fmtDate(r.emissaoTermo),'Eng. Ass.':fmtDate(r.engenhariaAss),'Proc. Ass.':fmtDate(r.procAss),'Dia Ass.':r.diaAss,'Sicovab':fmtDate(r.sicovabEnvio),'Prazo D.B':fmtDate(r.prazoEmissaoDB),'Emissão D.B':fmtDate(r.emissaoDB),'Dias':r.dias,'Status':recStatus(r)==='emitido'?'Emitida':recStatus(r)==='atrasado'?'Atrasada':'Pendente','Obs':r.observacoes}));const ws=XLSX.utils.json_to_sheet(data);const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,'Declarações');XLSX.writeFile(wb,'sicovab_dbs_'+todayISO()+'.xlsx');toast('Exportado.')}
-function exportExc(){const recs=visibleExc();if(!recs.length){toast('Nada para exportar.','err');return}const data=recs.map(r=>({'OS':r.os,'Cliente':r.cliente,'Vendedor':r.vendedor,'Modelo':r.modelo,'Status Exército':r.exercito,'Envio Sicovab':fmtDate(r.envioSicovab),'Prazo Emissão':fmtDate(r.prazoEmissao),'Data Emissão':fmtDate(r.dataEmissao),'Dias':r.dias,'Observação':r.observacao}));const ws=XLSX.utils.json_to_sheet(data);const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,'Autorizações');XLSX.writeFile(wb,'autorizacoes_exercito_'+todayISO()+'.xlsx');toast('Exportado.')}
+function exportExc(){const recs=getFilteredExc();if(!recs.length){toast('Nada para exportar.','err');return}const data=recs.map(r=>({'OS':r.os,'Cliente':r.cliente,'Vendedor':r.vendedor,'Modelo':r.modelo,'Status Exército':r.exercito,'Envio Sicovab':fmtDate(r.envioSicovab),'Prazo Emissão':fmtDate(r.prazoEmissao),'Data Emissão':fmtDate(r.dataEmissao),'Dias':r.dias,'Observação':r.observacao}));const ws=XLSX.utils.json_to_sheet(data);const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,'Autorizações');XLSX.writeFile(wb,'autorizacoes_exercito_'+todayISO()+'.xlsx');toast('Exportado.')}
 function exportUnified(){const data=getUnifiedData().map(r=>({'OS':r.os,'Cliente':r.cliente,'Vendedor':r.vendedor,'Veículo':r.veiculo,'D.B Emitida':r.dbs?fmtDate(r.dbs.emissaoDB):'—','D.B Status':r.dbs?recStatus(r.dbs):'—','Aut. Exército':r.aut?fmtDate(r.aut.dataEmissao):'—','Aut. Status':r.aut?'Pendente':'—'}));const ws=XLSX.utils.json_to_sheet(data);const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,'Unificado');XLSX.writeFile(wb,'visao_unificada_'+todayISO()+'.xlsx');toast('Exportado.')}
 function downloadSavedSheet(type){const recs=type==='dbs'?DB.declaracoes:DB.autorizacoes;if(!recs||!recs.length){toast('Nenhuma planilha salva.','err');return}const fileName=type==='dbs'?'sicovab_dbs_salva.xlsx':'autorizacoes_salva.xlsx';const data=recs.map(r=>Object.fromEntries(Object.entries(r).filter(([k])=>!k.startsWith('_'))));const ws=XLSX.utils.json_to_sheet(data);const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,type==='dbs'?'D.Bs':'Autorizações');XLSX.writeFile(wb,fileName);toast('Planilha baixada!')}
 function openModal(html,wide,narrow,noClose){$('#modalRoot').innerHTML='<div class="modal-overlay" id="mOv" '+(noClose?'':'onclick="if(event.target===this)closeModal()"')+'><div class="modal-box '+(wide?'wide':'')+' '+(narrow?'narrow':'')+'">'+html+'</div></div>'}
@@ -1587,31 +1567,22 @@ function openChangePassword(forced){
       const curVal=($('#cpCur').value||'').trim();
       const curLow=curVal.length?curVal[0].toLowerCase()+curVal.slice(1):curVal;
       const isMasterAdmin=(currentUser.email.toLowerCase()==='admin@conceptbesafe.com.br'&&(curVal==='admin123'||curLow==='admin123'));
-      if(!isMasterAdmin&&hash(curVal)!==currentUser.pass&&hash(curLow)!==currentUser.pass){
-        e.textContent='Senha atual incorreta.';e.style.display='block';return;
-      }
+      if(!isMasterAdmin&&hash(curVal)!==currentUser.pass&&hash(curLow)!==currentUser.pass){ e.textContent='Senha atual incorreta.';e.style.display='block';return; }
     }
     const n=($('#cpNew').value||'').trim();
     const c=($('#cpConf').value||'').trim();
     if(n.length<6){e.textContent='A nova senha deve ter no mínimo 6 caracteres.';e.style.display='block';return}
     if(n!==c){e.textContent='As senhas digitadas não conferem.';e.style.display='block';return}
-    btn.disabled=true;
-    btn.textContent='Salvando...';
-    const newHash=hash(n);
-    const nowISO=new Date().toISOString();
-    currentUser.pass=newHash;
-    currentUser.mustChange=false;
-    currentUser.passwordLastChanged=nowISO;
-    currentUser.updatedAt=nowISO;
+    btn.disabled=true; btn.textContent='Salvando...';
+    const newHash=hash(n); const nowISO=new Date().toISOString();
+    currentUser.pass=newHash; currentUser.mustChange=false; currentUser.passwordLastChanged=nowISO; currentUser.updatedAt=nowISO;
     const idx=DB.usuarios.findIndex(u=>u.email.toLowerCase()===currentUser.email.toLowerCase());
     if(idx>=0){
       DB.usuarios[idx].pass=newHash;
       DB.usuarios[idx].mustChange=false;
       DB.usuarios[idx].passwordLastChanged=nowISO;
       DB.usuarios[idx].updatedAt=nowISO;
-    }else{
-      DB.usuarios.push({...currentUser});
-    }
+    }else{ DB.usuarios.push({...currentUser}); }
     saveSignedSession(currentUser);
     await saveDB('users');
     closeModal();
@@ -1622,21 +1593,8 @@ function openChangePassword(forced){
 function openDetail(r){
   const st=recStatus(r);
   const cell=(k,v,m)=>'<div class="detail-cell"><div class="k">'+k+'</div><div class="v '+(m?'mono ':'')+' '+(v?'':'empty-v')+'">'+(v||'não informado')+'</div></div>';
-  
-  const historyHtml = (r.history || []).map(h => `
-    <div class="history-item">
-      <span class="history-date">${fmtDateTime(h.data)} • <b>${esc(h.autor)}</b></span>
-      <span>${esc(h.texto)}</span>
-    </div>
-  `).join('') || '<div style="color:var(--muted);font-size:11px;padding:10px">Nenhuma anotação.</div>';
-
-  const auditHtml = (r.audit || []).map(a => `
-    <div class="history-item">
-      <span class="history-date">${fmtDateTime(a.date)} • <b>${esc(a.user)}</b></span>
-      <span>${esc(a.action)}</span>
-    </div>
-  `).join('') || '<div style="color:var(--muted);font-size:11px;padding:10px">Nenhuma alteração registrada.</div>';
-
+  const historyHtml = (r.history || []).map(h => `<div class="history-item"><span class="history-date">${fmtDateTime(h.data)} • <b>${esc(h.autor)}</b></span><span>${esc(h.texto)}</span></div>`).join('') || '<div style="color:var(--muted);font-size:11px;padding:10px">Nenhuma anotação.</div>';
+  const auditHtml = (r.audit || []).map(a => `<div class="history-item"><span class="history-date">${fmtDateTime(a.date)} • <b>${esc(a.user)}</b></span><span>${esc(a.action)}</span></div>`).join('') || '<div style="color:var(--muted);font-size:11px;padding:10px">Nenhuma alteração registrada.</div>';
   openModal(`
     <div class="modal-head">
       <h3 class="mono" style="font-size:14px">OS ${esc(r.os||'—')}</h3>
@@ -1644,22 +1602,18 @@ function openDetail(r){
       <button class="btn btn-primary btn-sm" onclick="openEditOS('${esc(r.os)}')" style="margin-right:8px">✏️ Editar</button>
       <button class="modal-close" onclick="closeModal()">✕</button>
     </div>
-    
     <div class="modal-body" id="modal-pdf-content" style="background:var(--surface)">
       <div style="text-align:center;margin-bottom:20px;border-bottom:2px solid var(--primary);padding-bottom:10px">
         <h2 style="margin:0;color:var(--primary);font-size:18px">Concept Be Safe</h2>
         <p style="margin:0;font-size:12px;color:var(--muted)">Relatório da Declaração de Blindagem</p>
       </div>
-
       <div class="detail-grid">
         ${cell('Veículo',esc(r.veiculo))}${cell('Blindagem',esc(r.blindagem))}${cell('Cliente',esc(r.cliente))}${cell('Vendedor',esc(r.vendedor))}
         ${cell('Autorização',fmtDate(r.autorizacao),1)}${cell('Emissão Termo',fmtDate(r.emissaoTermo),1)}${cell('Engenharia Ass.',fmtDate(r.engenhariaAss),1)}${cell('Proc. Ass.',fmtDate(r.procAss),1)}
         ${cell('Dia Ass.',esc(r.diaAss))}${cell('Envio Sicovab',fmtDate(r.sicovabEnvio),1)}${cell('Prazo Emissão D.B',fmtDate(r.prazoEmissaoDB),1)}${cell('Emissão D.B',fmtDate(r.emissaoDB),1)}
         ${cell('Dias',r.dias!=null&&r.dias!==''?String(r.dias):'',1)}${cell('Status',st==='emitido'?'Emitida':st==='atrasado'?'Atrasada':'Pendente')}
       </div>
-      
       ${r.observacoes?'<div style="margin-top:12px;padding:10px;background:var(--surface2);border-radius:8px;font-size:11px;border:1px solid var(--border)"><b>Obs:</b> '+esc(r.observacoes)+'</div>':''}
-      
       <div style="display:flex; gap:15px; margin-top:20px; border-top: 1px dashed var(--border); padding-top:15px; flex-wrap:wrap;">
         <div style="flex:1; min-width:250px;">
             <h4 style="font-size:12px; margin-bottom:8px; color:var(--primary)">📝 Histórico de Anotações</h4>
@@ -1680,14 +1634,7 @@ function openDetail(r){
 
 function openExcDetail(r){
   const cell=(k,v,m)=>'<div class="detail-cell"><div class="k">'+k+'</div><div class="v '+(m?'mono ':'')+' '+(v?'':'empty-v')+'">'+(v||'não informado')+'</div></div>';
-  
-  const auditHtml = (r.audit || []).map(a => `
-    <div class="history-item">
-      <span class="history-date">${fmtDateTime(a.date)} • <b>${esc(a.user)}</b></span>
-      <span>${esc(a.action)}</span>
-    </div>
-  `).join('') || '<div style="color:var(--muted);font-size:11px;padding:10px">Nenhuma alteração registrada.</div>';
-
+  const auditHtml = (r.audit || []).map(a => `<div class="history-item"><span class="history-date">${fmtDateTime(a.date)} • <b>${esc(a.user)}</b></span><span>${esc(a.action)}</span></div>`).join('') || '<div style="color:var(--muted);font-size:11px;padding:10px">Nenhuma alteração registrada.</div>';
   openModal(`
     <div class="modal-head">
       <h3 class="mono" style="font-size:14px">OS ${esc(r.os||'—')} — Autorização</h3>
@@ -1707,7 +1654,6 @@ function openExcDetail(r){
         ${cell('Dias',r.dias!=null&&r.dias!==''?String(r.dias):'',1)}${cell('Pedido Compra',esc(r.pedidoCompra))}
       </div>
       ${r.observacao?'<div style="margin-top:12px;padding:10px;background:var(--surface2);border-radius:8px;font-size:11px;border:1px solid var(--border)"><b>Obs:</b> '+esc(r.observacao)+'</div>':''}
-      
       <div style="margin-top:20px; border-top: 1px dashed var(--border); padding-top:15px;">
         <h4 style="font-size:12px; margin-bottom:8px; color:var(--red)">🕵️ Auditoria (Alterações)</h4>
         <div class="history-list">${auditHtml}</div>
@@ -1767,14 +1713,10 @@ function openUserForm(existing,idx){
       u.role=role;
       u.team=team;
       u.updatedAt=nowISO;
-      if(passVal){
-        u.pass=hash(passVal);
-        u.mustChange=passVal==='123456';
-        u.passwordLastChanged=nowISO;
-      }
+      if(passVal){ u.pass=hash(passVal); u.mustChange=passVal==='123456'; u.passwordLastChanged=nowISO; }
       DB.usuarios[idx]=u;
     }
-    DB.usuarios = cleanDuplicateUsers(DB.usuarios); // Limpa após salvar
+    DB.usuarios = cleanDuplicateUsers(DB.usuarios);
     await saveDB('users');
     closeModal();
     renderUsers();
@@ -1786,54 +1728,145 @@ function visibleRecords(){
   if(!currentUser)return DB.declaracoes||[];
   if(currentUser.role==='admin')return DB.declaracoes||[];
   if(currentUser.role==='vendedor')return (DB.declaracoes||[]).filter(r=>matchVendorIdentity(r.vendedor,currentUser));
-  if(currentUser.role==='gerente'){
-    const team=currentUser.team||[];
-    if(!team.length)return DB.declaracoes||[];
-    return (DB.declaracoes||[]).filter(r=>matchVendorIdentity(r.vendedor,currentUser)||team.some(t=>matchVendorIdentity(r.vendedor,t)));
-  }
+  if(currentUser.role==='gerente'){ const team=currentUser.team||[]; if(!team.length)return DB.declaracoes||[]; return (DB.declaracoes||[]).filter(r=>matchVendorIdentity(r.vendedor,currentUser)||team.some(t=>matchVendorIdentity(r.vendedor,t))); }
   return DB.declaracoes||[];
 }
 function visibleExc(){
   if(!currentUser)return DB.autorizacoes||[];
   if(currentUser.role==='admin')return DB.autorizacoes||[];
   if(currentUser.role==='vendedor')return (DB.autorizacoes||[]).filter(r=>matchVendorIdentity(r.vendedor,currentUser));
-  if(currentUser.role==='gerente'){
-    const team=currentUser.team||[];
-    if(!team.length)return DB.autorizacoes||[];
-    return (DB.autorizacoes||[]).filter(r=>matchVendorIdentity(r.vendedor,currentUser)||team.some(t=>matchVendorIdentity(r.vendedor,t)));
-  }
+  if(currentUser.role==='gerente'){ const team=currentUser.team||[]; if(!team.length)return DB.autorizacoes||[]; return (DB.autorizacoes||[]).filter(r=>matchVendorIdentity(r.vendedor,currentUser)||team.some(t=>matchVendorIdentity(r.vendedor,t))); }
   return DB.autorizacoes||[];
 }
 
 function fillFilters(){populateYearSelects();const recs=visibleRecords();const uq=a=>[...new Set(a.filter(Boolean))].sort();const vs=$('#fVend'),cs=$('#fCliente'),bs=$('#fBlind');const cv=tableState.vend,cc=tableState.cli,cb=tableState.blind;vs.innerHTML='<option value="">Vendedor: todos</option>'+uq(recs.map(r=>r.vendedor)).map(v=>'<option value="'+esc(v)+'">'+esc(vendName(v))+'</option>').join('');cs.innerHTML='<option value="">Cliente: todos</option>'+uq(recs.map(r=>r.cliente)).map(v=>'<option value="'+esc(v)+'">'+esc(v.length>35?v.slice(0,35)+'…':v)+'</option>').join('');bs.innerHTML='<option value="">Blindagem: todas</option>'+uq(recs.map(r=>r.blindagem)).map(v=>'<option value="'+esc(v)+'">'+esc(v)+'</option>').join('');vs.value=cv;cs.value=cc;bs.value=cb}
 function getFiltered(){let recs=visibleRecords();const q=tableState.search.toLowerCase().trim();if(q)recs=recs.filter(r=>Object.values(r).map(v=>String(v==null?'':v)).join(' ').toLowerCase().includes(q)||vendName(r.vendedor).includes(q));if(tableState.vend)recs=recs.filter(r=>r.vendedor===tableState.vend);if(tableState.cli)recs=recs.filter(r=>r.cliente===tableState.cli);if(tableState.blind)recs=recs.filter(r=>r.blindagem===tableState.blind);if(tableState.status)recs=recs.filter(r=>recStatus(r)===tableState.status);if(tableState.dateField||tableState.date||tableState.month||tableState.year||tableState.from||tableState.to){recs=recs.filter(r=>matchTemporal(getDbsDates(r,tableState.dateField),tableState))}const k=tableState.sortKey,d=tableState.sortDir==='asc'?1:-1;return[...recs].sort((a,b)=>{let va,vb;if(k==='dias'){va=Number(a[k])||0;vb=Number(b[k])||0;return(va-vb)*d}va=String(a[k]||'').toLowerCase();vb=String(b[k]||'').toLowerCase();return va<vb?-d:va>vb?d:0})}
 const COLS=[{key:'_check',label:''},{key:'os',label:'OS'},{key:'cliente',label:'Cliente'},{key:'veiculo',label:'Veículo'},{key:'blindagem',label:'Blindagem'},{key:'vendedor',label:'Vendedor'},{key:'autorizacao',label:'Autorização'},{key:'emissaoTermo',label:'Emi. Termo'},{key:'engenhariaAss',label:'Eng. Ass.'},{key:'procAss',label:'Proc. Ass.'},{key:'diaAss',label:'Dia'},{key:'sicovabEnvio',label:'Sicovab'},{key:'prazoEmissaoDB',label:'Prazo D.B'},{key:'emissaoDB',label:'Emissão D.B'},{key:'dias',label:'Dias'},{key:'_status',label:'Status'}];
-function renderTable(){fillFilters();$('#theadRow').innerHTML=COLS.map(c=>{if(c.key==='_check')return'<th style="width:30px;"><input type="checkbox" onchange="toggleAllDbs(this.checked)"></th>';const arr=tableState.sortKey===c.key?(tableState.sortDir==='asc'?'▲':'▼'):'';return'<th data-k="'+c.key+'">'+c.label+' <span style="opacity:.5;font-size:8px">'+arr+'</span></th>'}).join('');$$('#theadRow th').forEach(th=>th.onclick=()=>{const k=th.dataset.k;if(!k||k==='_check')return;if(tableState.sortKey===k)tableState.sortDir=tableState.sortDir==='asc'?'desc':'asc';else{tableState.sortKey=k;tableState.sortDir='asc'}tableState.page=1;renderTable()});const all=getFiltered();$('#recCount').textContent=all.length+' registro'+(all.length===1?'':'s')+(currentUser.role==='vendedor'?' (seus)':currentUser.role==='gerente'?' (sua equipe)':'');const pp=tableState.perPage,total=all.length,pages=Math.max(1,Math.ceil(total/pp));if(tableState.page>pages)tableState.page=pages;const start=(tableState.page-1)*pp,rows=all.slice(start,start+pp),tb=$('#tbodyRec');if(!rows.length){tb.innerHTML='<tr><td colspan="'+COLS.length+'" style="text-align:center;padding:40px;color:var(--muted)">Nenhum registro encontrado</td></tr>'}else{tb.innerHTML=rows.map(r=>{const st=recStatus(r);const lbl=st==='emitido'?'Emitida':st==='atrasado'?'Atrasada':'Pendente';const isChecked=selectedDbs.has(String(r.os))?'checked':'';return'<tr data-id="'+esc(r._id||r.os)+'"><td onclick="event.stopPropagation()" style="text-align:center"><input type="checkbox" onchange="toggleDbSelection(\''+esc(r.os)+'\', this.checked)" '+isChecked+'></td><td class="os">'+esc(r.os||'—')+'</td><td style="max-width:160px;overflow:hidden;text-overflow:ellipsis">'+esc(r.cliente||'—')+'</td><td>'+esc(r.veiculo||'—')+'</td><td style="max-width:140px;overflow:hidden;text-overflow:ellipsis">'+esc(r.blindagem||'—')+'</td><td><span class="vend-pill"><span class="vend-dot" style="background:'+vendColor(r.vendedor)+'">'+esc((vendName(r.vendedor)||'?')[0].toUpperCase())+'</span>'+esc(vendName(r.vendedor)||'—')+'</span></td><td class="mono" style="font-size:10px">'+fmtDate(r.autorizacao)+'</td><td class="mono" style="font-size:10px">'+fmtDate(r.emissaoTermo)+'</td><td class="mono" style="font-size:10px">'+fmtDate(r.engenhariaAss)+'</td><td class="mono" style="font-size:10px">'+fmtDate(r.procAss)+'</td><td style="font-size:9px">'+esc(r.diaAss||'—')+'</td><td class="mono" style="font-size:10px">'+fmtDate(r.sicovabEnvio)+'</td><td class="mono" style="font-size:10px">'+fmtDate(r.prazoEmissaoDB)+'</td><td class="mono" style="font-size:10px;font-weight:600">'+fmtDate(r.emissaoDB)+'</td><td class="mono" style="text-align:center">'+(r.dias!=null&&r.dias!==''?r.dias:'—')+'</td><td><span class="badge '+st+'"><span class="dot"></span>'+lbl+'</span></td></tr>'}).join('');tb.querySelectorAll('tr').forEach(tr=>{const rec=DB.declaracoes.find(r=>(r._id||r.os)===tr.dataset.id);if(rec)tr.onclick=()=>openDetail(rec)})}updateBulkBarDbs();$('#pgInfo').innerHTML='<b>'+(total?start+1:0)+'–'+Math.min(start+pp,total)+'</b> de <b>'+total+'</b>';let btns='';const maxB=5;let s=Math.max(1,tableState.page-2),en=Math.min(pages,s+maxB-1);s=Math.max(1,en-maxB+1);for(let p=s;p<=en;p++)btns+='<button class="pg-btn '+(p===tableState.page?'active':'')+'" onclick="tableState.page='+p+';renderTable()">'+p+'</button>';$('#pgBtns').innerHTML=btns}
-window.toggleAllDbs = function(checked) {
-    const all = getFiltered();
-    const start = (tableState.page - 1) * tableState.perPage;
-    const rows = all.slice(start, start + tableState.perPage);
-    rows.forEach(r => {
-        if(checked) selectedDbs.add(String(r.os));
-        else selectedDbs.delete(String(r.os));
+
+function renderTable(){
+  fillFilters();
+  const all=getFiltered();
+  const start=(tableState.page-1)*tableState.perPage;
+  const rows=all.slice(start,start+tableState.perPage);
+  const allOnPageSelected = rows.length > 0 && rows.every(r => selectedDbs.has(String(r.os)));
+  
+  $('#theadRow').innerHTML=COLS.map(c=>{
+    if(c.key==='_check'){
+      return '<th class="checkbox-header"><input type="checkbox" style="width:22px;height:22px;cursor:pointer;" onchange="toggleAllDbsOnPage(this)" '+(allOnPageSelected?'checked':'')+'></th>';
+    }
+    const arr=tableState.sortKey===c.key?(tableState.sortDir==='asc'?'▲':'▼'):'';
+    return'<th data-k="'+c.key+'">'+c.label+' <span style="opacity:.5;font-size:8px">'+arr+'</span></th>'
+  }).join('');
+  
+  $$('#theadRow th').forEach(th=>{ if(th.dataset.k) th.onclick=()=>{const k=th.dataset.k;if(tableState.sortKey===k)tableState.sortDir=tableState.sortDir==='asc'?'desc':'asc';else{tableState.sortKey=k;tableState.sortDir='asc'}tableState.page=1;renderTable()} });
+  
+  $('#recCount').textContent=all.length+' registro'+(all.length===1?'':'s')+(currentUser.role==='vendedor'?' (seus)':currentUser.role==='gerente'?' (sua equipe)':'');
+  const pp=tableState.perPage,total=all.length,pages=Math.max(1,Math.ceil(total/pp));
+  if(tableState.page>pages)tableState.page=pages;
+  const tb=$('#tbodyRec');
+  
+  if(!rows.length){
+    tb.innerHTML='<tr><td colspan="'+COLS.length+'" style="text-align:center;padding:40px;color:var(--muted)">Nenhum registro encontrado</td></tr>';
+  }else{
+    tb.innerHTML=rows.map(r=>{
+      const st=recStatus(r);
+      const lbl=st==='emitido'?'Emitida':st==='atrasado'?'Atrasada':'Pendente';
+      const isChecked=selectedDbs.has(String(r.os))?'checked':'';
+      const rowClass=selectedDbs.has(String(r.os))?'selected-row':'';
+      return'<tr data-id="'+esc(r._id||r.os)+'" class="'+rowClass+'">'+
+        '<td class="checkbox-cell" onclick="event.stopPropagation()"><input type="checkbox" style="width:22px;height:22px;cursor:pointer;" onchange="toggleDbRow(\''+esc(r.os)+'\', this)" '+isChecked+'></td>'+
+        '<td class="os">'+esc(r.os||'—')+'</td>'+
+        '<td style="max-width:160px;overflow:hidden;text-overflow:ellipsis">'+esc(r.cliente||'—')+'</td>'+
+        '<td>'+esc(r.veiculo||'—')+'</td>'+
+        '<td style="max-width:140px;overflow:hidden;text-overflow:ellipsis">'+esc(r.blindagem||'—')+'</td>'+
+        '<td><span class="vend-pill"><span class="vend-dot" style="background:'+vendColor(r.vendedor)+'">'+esc((vendName(r.vendedor)||'?')[0].toUpperCase())+'</span>'+esc(vendName(r.vendedor)||'—')+'</span></td>'+
+        '<td class="mono" style="font-size:10px">'+fmtDate(r.autorizacao)+'</td>'+
+        '<td class="mono" style="font-size:10px">'+fmtDate(r.emissaoTermo)+'</td>'+
+        '<td class="mono" style="font-size:10px">'+fmtDate(r.engenhariaAss)+'</td>'+
+        '<td class="mono" style="font-size:10px">'+fmtDate(r.procAss)+'</td>'+
+        '<td style="font-size:9px">'+esc(r.diaAss||'—')+'</td>'+
+        '<td class="mono" style="font-size:10px">'+fmtDate(r.sicovabEnvio)+'</td>'+
+        '<td class="mono" style="font-size:10px">'+fmtDate(r.prazoEmissaoDB)+'</td>'+
+        '<td class="mono" style="font-size:10px;font-weight:600">'+fmtDate(r.emissaoDB)+'</td>'+
+        '<td class="mono" style="text-align:center">'+(r.dias!=null&&r.dias!==''?r.dias:'—')+'</td>'+
+        '<td><span class="badge '+st+'"><span class="dot"></span>'+lbl+'</span></td>'+
+      '</tr>';
+    }).join('');
+    tb.querySelectorAll('tr').forEach(tr=>{
+      const rec=DB.declaracoes.find(r=>(r._id||r.os)===tr.dataset.id);
+      if(rec) tr.onclick=()=>openDetail(rec);
     });
-    renderTable();
-};
+  }
+  
+  updateBulkBarDbs();
+  updateSelectionInfoDbs();
+  $('#pgInfo').innerHTML='<b>'+(total?start+1:0)+'–'+Math.min(start+pp,total)+'</b> de <b>'+total+'</b>';
+  let btns='';const maxB=5;let s=Math.max(1,tableState.page-2),en=Math.min(pages,s+maxB-1);s=Math.max(1,en-maxB+1);
+  for(let p=s;p<=en;p++)btns+='<button class="pg-btn '+(p===tableState.page?'active':'')+'" onclick="tableState.page='+p+';renderTable()">'+p+'</button>';
+  $('#pgBtns').innerHTML=btns;
+}
 
 const EXC_COLS=[{key:'_check',label:''},{key:'os',label:'OS'},{key:'cliente',label:'Cliente'},{key:'vendedor',label:'Vendedor'},{key:'modelo',label:'Modelo'},{key:'exercito',label:'Status Exército'},{key:'envioSicovab',label:'Envio Sicovab'},{key:'prazoEmissao',label:'Prazo Emissão'},{key:'dataEmissao',label:'Data Emissão'},{key:'dias',label:'Dias'},{key:'observacao',label:'Observação'}];
-function renderExcTable(){populateYearSelects();const recs=visibleExc();const uq=a=>[...new Set(a.filter(Boolean))].sort();const vs=$('#fExcVend'),ss=$('#fExcStatus');const cv=excState.vend,cs=excState.status;vs.innerHTML='<option value="">Vendedor: todos</option>'+uq(recs.map(r=>r.vendedor)).map(v=>'<option value="'+esc(v)+'">'+esc(vendName(v))+'</option>').join('');ss.innerHTML='<option value="">Status Exército: todos</option>'+uq(recs.map(r=>r.exercito)).map(v=>'<option value="'+esc(v)+'">'+esc(v.length>40?v.slice(0,40)+'…':v)+'</option>').join('');vs.value=cv;ss.value=cs;$('#excHeadRow').innerHTML=EXC_COLS.map(c=>{if(c.key==='_check')return'<th style="width:30px;"><input type="checkbox" onchange="toggleAllExc(this.checked)"></th>';return'<th>'+c.label+'</th>'}).join('');let filtered=recs;const q=excState.search.toLowerCase().trim();if(q)filtered=filtered.filter(r=>Object.values(r).map(v=>String(v==null?'':v)).join(' ').toLowerCase().includes(q));if(excState.vend)filtered=filtered.filter(r=>r.vendedor===excState.vend);if(excState.status)filtered=filtered.filter(r=>r.exercito===excState.status);if(excState.dates&&excState.dates.length>0){filtered=filtered.filter(r=>{const recDates=[r.envioSicovab,r.prazoEmissao,r.dataEmissao,r.dataColeta,r.prazo9dias,r.dtaPrev07,r.dtaPrev09].filter(Boolean);return recDates.some(d=>excState.dates.includes(d))})}if(excState.dateField||excState.date||excState.month||excState.year||excState.from||excState.to){filtered=filtered.filter(r=>matchTemporal(getExcDates(r,excState.dateField),excState))}$('#excCount').textContent=filtered.length+' processo'+(filtered.length===1?'':'s')+(currentUser.role==='vendedor'?' (seus)':currentUser.role==='gerente'?' (sua equipe)':'');const pp=excState.perPage,total=filtered.length,pages=Math.max(1,Math.ceil(total/pp));if(excState.page>pages)excState.page=pages;const start=(excState.page-1)*pp,rows=filtered.slice(start,start+pp),tb=$('#excBody');if(!rows.length){tb.innerHTML='<tr><td colspan="'+EXC_COLS.length+'" style="text-align:center;padding:40px;color:var(--muted)">Nenhum processo encontrado</td></tr>'}else{tb.innerHTML=rows.map(r=>{const isChecked=selectedExc.has(String(r.os))?'checked':'';return'<tr data-id="'+esc(r._id||r.os)+'"><td onclick="event.stopPropagation()" style="text-align:center"><input type="checkbox" onchange="toggleExcSelection(\''+esc(r.os)+'\', this.checked)" '+isChecked+'></td><td class="os">'+esc(r.os||'—')+'</td><td style="max-width:180px;overflow:hidden;text-overflow:ellipsis">'+esc(r.cliente||'—')+'</td><td><span class="vend-pill"><span class="vend-dot" style="background:'+vendColor(r.vendedor)+'">'+esc((vendName(r.vendedor)||'?')[0].toUpperCase())+'</span>'+esc(vendName(r.vendedor)||'—')+'</span></td><td>'+esc(r.modelo||'—')+'</td><td style="max-width:220px;overflow:hidden;text-overflow:ellipsis;font-size:10px"><span class="badge autpendente"><span class="dot"></span>'+esc(r.exercito||'—')+'</span></td><td class="mono" style="font-size:10px">'+fmtDate(r.envioSicovab)+'</td><td class="mono" style="font-size:10px">'+fmtDate(r.prazoEmissao)+'</td><td class="mono" style="font-size:10px;font-weight:600">'+fmtDate(r.dataEmissao)+'</td><td class="mono" style="text-align:center">'+(r.dias!=null&&r.dias!==''?r.dias:'—')+'</td><td style="max-width:200px;overflow:hidden;text-overflow:ellipsis;font-size:10px">'+esc(r.observacao||'—')+'</td></tr>'}).join('');tb.querySelectorAll('tr').forEach(tr=>{const rec=(DB.autorizacoes||[]).find(r=>String(r._id||r.os)===String(tr.dataset.id));if(rec)tr.onclick=()=>openExcDetail(rec)})}updateBulkBarExc();$('#excPgInfo').innerHTML='<b>'+(total?start+1:0)+'–'+Math.min(start+pp,total)+'</b> de <b>'+total+'</b>';let btns='';const maxB=5;let s=Math.max(1,excState.page-2),en=Math.min(pages,s+maxB-1);s=Math.max(1,en-maxB+1);for(let p=s;p<=en;p++)btns+='<button class="pg-btn '+(p===excState.page?'active':'')+'" onclick="excState.page='+p+';renderExcTable()">'+p+'</button>';$('#excPgBtns').innerHTML=btns}
-window.toggleAllExc = function(checked) {
-    const filtered=visibleExc();
-    let f2=filtered;
-    const q=excState.search.toLowerCase().trim();if(q)f2=f2.filter(r=>Object.values(r).map(v=>String(v==null?'':v)).join(' ').toLowerCase().includes(q));if(excState.vend)f2=f2.filter(r=>r.vendedor===excState.vend);if(excState.status)f2=f2.filter(r=>r.exercito===excState.status);
-    const start = (excState.page - 1) * excState.perPage;
-    const rows = f2.slice(start, start + excState.perPage);
-    rows.forEach(r => {
-        if(checked) selectedExc.add(String(r.os));
-        else selectedExc.delete(String(r.os));
+
+function renderExcTable(){
+  populateYearSelects();
+  const recs=visibleExc();
+  const uq=a=>[...new Set(a.filter(Boolean))].sort();
+  const vs=$('#fExcVend'),ss=$('#fExcStatus');
+  const cv=excState.vend,cs=excState.status;
+  vs.innerHTML='<option value="">Vendedor: todos</option>'+uq(recs.map(r=>r.vendedor)).map(v=>'<option value="'+esc(v)+'">'+esc(vendName(v))+'</option>').join('');
+  ss.innerHTML='<option value="">Status Exército: todos</option>'+uq(recs.map(r=>r.exercito)).map(v=>'<option value="'+esc(v)+'">'+esc(v.length>40?v.slice(0,40)+'…':v)+'</option>').join('');
+  vs.value=cv;ss.value=cs;
+  
+  const filtered = getFilteredExc();
+  
+  $('#excCount').textContent=filtered.length+' processo'+(filtered.length===1?'':'s')+(currentUser.role==='vendedor'?' (seus)':currentUser.role==='gerente'?' (sua equipe)':'');
+  const pp=excState.perPage,total=filtered.length,pages=Math.max(1,Math.ceil(total/pp));
+  if(excState.page>pages)excState.page=pages;
+  const start=(excState.page-1)*pp,rows=filtered.slice(start,start+pp);
+  const allOnPageSelected = rows.length > 0 && rows.every(r => selectedExc.has(String(r.os)));
+  
+  $('#excHeadRow').innerHTML=EXC_COLS.map(c=>{
+    if(c.key==='_check'){
+      return '<th class="checkbox-header"><input type="checkbox" style="width:22px;height:22px;cursor:pointer;" onchange="toggleAllExcOnPage(this)" '+(allOnPageSelected?'checked':'')+'></th>';
+    }
+    return'<th>'+c.label+'</th>'
+  }).join('');
+  
+  const tb=$('#excBody');
+  if(!rows.length){
+    tb.innerHTML='<tr><td colspan="'+EXC_COLS.length+'" style="text-align:center;padding:40px;color:var(--muted)">Nenhum processo encontrado</td></tr>';
+  }else{
+    tb.innerHTML=rows.map(r=>{
+      const isChecked=selectedExc.has(String(r.os))?'checked':'';
+      const rowClass=selectedExc.has(String(r.os))?'selected-row':'';
+      return'<tr data-id="'+esc(r._id||r.os)+'" class="'+rowClass+'">'+
+        '<td class="checkbox-cell" onclick="event.stopPropagation()"><input type="checkbox" style="width:22px;height:22px;cursor:pointer;" onchange="toggleExcRow(\''+esc(r.os)+'\', this)" '+isChecked+'></td>'+
+        '<td class="os">'+esc(r.os||'—')+'</td>'+
+        '<td style="max-width:180px;overflow:hidden;text-overflow:ellipsis">'+esc(r.cliente||'—')+'</td>'+
+        '<td><span class="vend-pill"><span class="vend-dot" style="background:'+vendColor(r.vendedor)+'">'+esc((vendName(r.vendedor)||'?')[0].toUpperCase())+'</span>'+esc(vendName(r.vendedor)||'—')+'</span></td>'+
+        '<td>'+esc(r.modelo||'—')+'</td>'+
+        '<td style="max-width:220px;overflow:hidden;text-overflow:ellipsis;font-size:10px"><span class="badge autpendente"><span class="dot"></span>'+esc(r.exercito||'—')+'</span></td>'+
+        '<td class="mono" style="font-size:10px">'+fmtDate(r.envioSicovab)+'</td>'+
+        '<td class="mono" style="font-size:10px">'+fmtDate(r.prazoEmissao)+'</td>'+
+        '<td class="mono" style="font-size:10px;font-weight:600">'+fmtDate(r.dataEmissao)+'</td>'+
+        '<td class="mono" style="text-align:center">'+(r.dias!=null&&r.dias!==''?r.dias:'—')+'</td>'+
+        '<td style="max-width:200px;overflow:hidden;text-overflow:ellipsis;font-size:10px">'+esc(r.observacao||'—')+'</td>'+
+      '</tr>';
+    }).join('');
+    tb.querySelectorAll('tr').forEach(tr=>{
+      const rec=(DB.autorizacoes||[]).find(r=>String(r._id||r.os)===String(tr.dataset.id));
+      if(rec) tr.onclick=()=>openExcDetail(rec);
     });
-    renderExcTable();
-};
+  }
+  
+  updateBulkBarExc();
+  updateSelectionInfoExc();
+  $('#excPgInfo').innerHTML='<b>'+(total?start+1:0)+'–'+Math.min(start+pp,total)+'</b> de <b>'+total+'</b>';
+  let btns='';const maxB=5;let s=Math.max(1,excState.page-2),en=Math.min(pages,s+maxB-1);s=Math.max(1,en-maxB+1);
+  for(let p=s;p<=en;p++)btns+='<button class="pg-btn '+(p===excState.page?'active':'')+'" onclick="excState.page='+p+';renderExcTable()">'+p+'</button>';
+  $('#excPgBtns').innerHTML=btns;
+}
 
 function getUnifiedData(){const dbs=visibleRecords();const exc=visibleExc();const unified=new Map();dbs.forEach(r=>{unified.set(r.os,{os:r.os,cliente:r.cliente,vendedor:r.vendedor,veiculo:r.veiculo,blindagem:r.blindagem,dbs:r,aut:null})});exc.forEach(r=>{if(unified.has(r.os)){unified.get(r.os).aut=r}else{unified.set(r.os,{os:r.os,cliente:r.cliente,vendedor:r.vendedor,veiculo:r.modelo,blindagem:'',dbs:null,aut:r})}});return Array.from(unified.values())}
 function renderUnified(){populateYearSelects();const all=getUnifiedData();const uq=a=>[...new Set(a.filter(Boolean))].sort();const vs=$('#fUniVend');const cv=uniState.vend;vs.innerHTML='<option value="">Vendedor: todos</option>'+uq(all.map(r=>r.vendedor)).map(v=>'<option value="'+esc(v)+'">'+esc(vendName(v))+'</option>').join('');vs.value=cv;$('#uniHeadRow').innerHTML='<th>OS</th><th>Cliente</th><th>Vendedor</th><th>Veículo</th><th>D.B</th><th>Autorização</th><th>Emissão D.B</th><th>Aut. Exército</th><th>Timeline</th>';let filtered=all;const q=uniState.search.toLowerCase().trim();if(q)filtered=filtered.filter(r=>Object.values(r).map(v=>String(v==null?'':v)).join(' ').toLowerCase().includes(q));if(uniState.vend)filtered=filtered.filter(r=>r.vendedor===uniState.vend);if(uniState.status==='completo')filtered=filtered.filter(r=>r.dbs&&r.aut);if(uniState.status==='so-dbs')filtered=filtered.filter(r=>r.dbs&&!r.aut);if(uniState.status==='so-aut')filtered=filtered.filter(r=>!r.dbs&&r.aut);if(uniState.dateField||uniState.date||uniState.month||uniState.year||uniState.from||uniState.to){filtered=filtered.filter(r=>matchTemporal(getUniDates(r,uniState.dateField),uniState))}$('#uniCount').textContent=filtered.length+' processo'+(filtered.length===1?'':'s');const pp=uniState.perPage,total=filtered.length,pages=Math.max(1,Math.ceil(total/pp));if(uniState.page>pages)uniState.page=pages;const start=(uniState.page-1)*pp,rows=filtered.slice(start,start+pp),tb=$('#uniBody');if(!rows.length){tb.innerHTML='<tr><td colspan="9" style="text-align:center;padding:40px;color:var(--muted)">Nenhum registro encontrado</td></tr>'}else{tb.innerHTML=rows.map(r=>{const dbsStatus=r.dbs?recStatus(r.dbs):null;const dbsLabel=dbsStatus==='emitido'?'Emitida':dbsStatus==='atrasado'?'Atrasada':dbsStatus==='pendente'?'Pendente':'—';const autLabel=r.aut?'Pendente':'—';const timeline=[];if(r.dbs&&r.dbs.autorizacao)timeline.push({date:r.dbs.autorizacao,event:'Autorização',source:'dbs'});if(r.dbs&&r.dbs.emissaoTermo)timeline.push({date:r.dbs.emissaoTermo,event:'Emissão Termo',source:'dbs'});if(r.dbs&&r.dbs.emissaoDB)timeline.push({date:r.dbs.emissaoDB,event:'Emissão D.B',source:'dbs'});if(r.aut&&r.aut.envioSicovab)timeline.push({date:r.aut.envioSicovab,event:'Envio Sicovab',source:'aut'});if(r.aut&&r.aut.dataEmissao)timeline.push({date:r.aut.dataEmissao,event:'Aut. Exército',source:'aut'});timeline.sort((a,b)=>a.date.localeCompare(b.date));const timelineHtml=timeline.slice(-3).map(t=>'<div class="timeline-item"><span class="timeline-date">'+fmtDate(t.date)+'</span><span class="timeline-event">'+t.event+'</span><span class="timeline-source '+t.source+'">'+(t.source==='dbs'?'D.B':'Aut.')+'</span></div>').join('');return'<tr data-os="'+esc(r.os)+'"><td class="os">'+esc(r.os||'—')+'</td><td style="max-width:160px;overflow:hidden;text-overflow:ellipsis">'+esc(r.cliente||'—')+'</td><td><span class="vend-pill"><span class="vend-dot" style="background:'+vendColor(r.vendedor)+'">'+esc((vendName(r.vendedor)||'?')[0].toUpperCase())+'</span>'+esc(vendName(r.vendedor)||'—')+'</span></td><td>'+esc(r.veiculo||'—')+'</td><td>'+(dbsStatus?'<span class="badge '+dbsStatus+'"><span class="dot"></span>'+dbsLabel+'</span>':'—')+'</td><td>'+(r.aut?'<span class="badge autpendente"><span class="dot"></span>'+autLabel+'</span>':'—')+'</td><td class="mono" style="font-size:10px">'+(r.dbs?fmtDate(r.dbs.emissaoDB):'—')+'</td><td class="mono" style="font-size:10px">'+(r.aut?fmtDate(r.aut.dataEmissao):'—')+'</td><td><div class="unified-timeline">'+(timelineHtml||'<span style="color:var(--muted);font-size:10px">Sem eventos</span>')+'</div></td></tr>'}).join('');tb.querySelectorAll('tr').forEach(tr=>{tr.onclick=()=>{const os=tr.dataset.os;const rec=getUnifiedData().find(r=>r.os===os);if(rec)openUnifiedDetail(rec)}})}$('#uniPgInfo').innerHTML='<b>'+(total?start+1:0)+'–'+Math.min(start+pp,total)+'</b> de <b>'+total+'</b>';let btns='';const maxB=5;let s=Math.max(1,uniState.page-2),en=Math.min(pages,s+maxB-1);s=Math.max(1,en-maxB+1);for(let p=s;p<=en;p++)btns+='<button class="pg-btn '+(p===uniState.page?'active':'')+'" onclick="uniState.page='+p+';renderUnified()">'+p+'</button>';$('#uniPgBtns').innerHTML=btns}
@@ -1869,13 +1902,9 @@ function updateBarRender(){
   const badge=$('#storageBadge');
   if(badge){
     const base=getCloudBaseUrl();
-    if(!base){
-      badge.style.color='var(--amber)';
-      badge.textContent='🟡 Nuvem NÃO configurada NESTE aparelho';
-    }else if(!window.__lastPullOK){
-      badge.style.color='var(--red)';
-      badge.textContent='🔴 Falha ao conectar no Firebase (Verifique Regras)';
-    }else{
+    if(!base){ badge.style.color='var(--amber)'; badge.textContent='🟡 Nuvem NÃO configurada NESTE aparelho'; }
+    else if(!window.__lastPullOK){ badge.style.color='var(--red)'; badge.textContent='🔴 Falha ao conectar no Firebase (Verifique Regras)'; }
+    else{
       const lastP=new Date(window.__lastPullOK).toLocaleTimeString('pt-BR');
       const lastU=window.__lastPushOK?new Date(window.__lastPushOK).toLocaleTimeString('pt-BR'):'—';
       badge.style.color='var(--green)';
@@ -1906,7 +1935,6 @@ function renderDashboard(){
   populateYearSelects();
   const baseRecs=visibleRecords();
   const baseExc=visibleExc();
-
   const uqVends=[...new Set(baseRecs.map(r=>r.vendedor).filter(Boolean))].sort();
   const dashVendSel=$('#fDashVend');
   if(dashVendSel){
@@ -1915,15 +1943,12 @@ function renderDashboard(){
     dashVendSel.value=uqVends.includes(curV)?curV:'';
     if(!uqVends.includes(curV))dashState.vend='';
   }
-
   const hasDashFilter=Boolean(dashState.date||dashState.month||dashState.year||dashState.from||dashState.to);
   let recs=baseRecs.filter(r=>matchTemporal(getDbsDates(r,dashState.dateField),dashState));
   if(dashState.vend)recs=recs.filter(r=>r.vendedor===dashState.vend);
   if(dashState.status)recs=recs.filter(r=>recStatus(r)===dashState.status);
-
   let excRecs=baseExc.filter(r=>matchTemporal(getExcDates(r,dashState.dateField==='sicovabEnvio'?'envioSicovab':dashState.dateField==='prazoEmissaoDB'?'prazoEmissao':dashState.dateField==='emissaoDB'?'dataEmissao':''),dashState));
   if(dashState.vend)excRecs=excRecs.filter(r=>vendMatchExc(r,dashState.vend));
-
   const hoje=todayISO();
   const limite7d=addDaysISO(hoje,7);
   const em=recs.filter(r=>recStatus(r)==='emitido');
@@ -1932,23 +1957,19 @@ function renderDashboard(){
   const pendNoPrazo=recs.filter(r=>recStatus(r)==='pendente');
   const vencendo7=pendAll.filter(r=>r.prazoEmissaoDB&&r.prazoEmissaoDB>=hoje&&r.prazoEmissaoDB<=limite7d);
   const semSicovab=pendAll.filter(r=>!r.sicovabEnvio||r.sicovabEnvio==='');
-
   const mesAtual=hoje.slice(0,7);
   const emRef=hasDashFilter?em:em.filter(r=>(r.emissaoDB||'').substring(0,7)===mesAtual);
   const diasMes=emRef.map(r=>Number(r.dias)).filter(n=>!isNaN(n)&&n>0);
   const mediaMes=diasMes.length?Math.round(diasMes.reduce((a,b)=>a+b,0)/diasMes.length*10)/10:0;
-
   const diasGeral=em.map(r=>Number(r.dias)).filter(n=>!isNaN(n)&&n>0);
   const mediaGeral=diasGeral.length?Math.round(diasGeral.reduce((a,b)=>a+b,0)/diasGeral.length*10)/10:0;
   const minDias=diasGeral.length?Math.min(...diasGeral):0;
   const maxDias=diasGeral.length?Math.max(...diasGeral):0;
-
   const taxaConcl=recs.length?Math.round((em.length/recs.length)*100):0;
   const emComPrazo=em.filter(r=>r.prazoEmissaoDB&&r.emissaoDB);
   const emNoPrazo=emComPrazo.filter(r=>r.emissaoDB<=r.prazoEmissaoDB);
   const slaPct=emComPrazo.length?Math.round((emNoPrazo.length/emComPrazo.length)*100):100;
   const excComSicovab=excRecs.filter(r=>r.envioSicovab).length;
-
   $('#kTotal').textContent=recs.length;
   $('#kTotalHint').textContent=new Set(recs.map(r=>r.cliente).filter(Boolean)).size+' clientes';
   $('#kEmitidas').textContent=em.length;
@@ -1965,7 +1986,6 @@ function renderDashboard(){
   $('#kSemSicovab').textContent=semSicovab.length;
   $('#kExcPend').textContent=excRecs.length;
   $('#kExcHint').textContent=excComSicovab+' enviados ao Sicovab';
-
   const totalPipe=recs.length||1;
   const steps=[
     {name:'1. Autorização',count:recs.filter(r=>r.autorizacao).length,color:'#3b82f6',sub:'Aut. registrada'},
@@ -1982,7 +2002,6 @@ function renderDashboard(){
       return`<div class="pipe-step"><div class="pipe-top"><span class="st-name">${s.name}</span><span class="st-pct">${pct}%</span></div><div class="pipe-val">${s.count}</div><div class="pipe-bar"><div class="pipe-fill" style="width:${pct}%;background:${s.color}"></div></div><div class="pipe-sub">${s.sub} • faltam: <b>${Math.max(0,recs.length-s.count)}</b></div></div>`;
     }).join('');
   }
-
   renderDashAlerts();
   renderCharts(recs,excRecs);
   renderDashTables(recs,excRecs);
@@ -2039,37 +2058,29 @@ function renderCharts(recs,excRecs=[]){
     charts={};
     const PAL=['#3b82f6','#10b981','#f59e0b','#ef4444','#8b5cf6','#ec4899','#14b8a6','#f97316','#6366f1','#84cc16','#06b6d4','#e11d48'];
     const isMob=window.innerWidth<640;
-
     const byV={};
     recs.forEach(r=>{const k=vendName(r.vendedor)||'—';if(!byV[k])byV[k]={em:0,pe:0,at:0,tot:0};const st=recStatus(r);if(st==='emitido')byV[k].em++;else if(st==='atrasado')byV[k].at++;else byV[k].pe++;byV[k].tot++});
     const vA=Object.entries(byV).sort((a,b)=>b[1].tot-a[1].tot).slice(0,9);
     if($('#chVend'))charts.v=new Chart($('#chVend'),{type:'bar',data:{labels:vA.map(x=>x[0]),datasets:[{label:'Emitidas',data:vA.map(x=>x[1].em),backgroundColor:'#10b981',borderRadius:4},{label:'Pendentes',data:vA.map(x=>x[1].pe),backgroundColor:'#f59e0b',borderRadius:4},{label:'Atrasadas',data:vA.map(x=>x[1].at),backgroundColor:'#ef4444',borderRadius:4}]},options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'bottom',labels:{boxWidth:10,font:{size:10}}}},scales:{x:{stacked:true,beginAtZero:true},y:{stacked:true}}}});
-
     const stCounts={emitido:0,pendente:0,atrasado:0};
     recs.forEach(r=>{stCounts[recStatus(r)]++});
     if($('#chStatus'))charts.st=new Chart($('#chStatus'),{type:'doughnut',data:{labels:['Emitidas','No Prazo','Atrasadas'],datasets:[{data:[stCounts.emitido,stCounts.pendente,stCounts.atrasado],backgroundColor:['#10b981','#f59e0b','#ef4444']}]},options:{responsive:true,maintainAspectRatio:false,cutout:'58%',plugins:{legend:{position:isMob?'bottom':'right',labels:{boxWidth:10,font:{size:10}}}}}});
-
     const byM={},bySic={};
     recs.forEach(r=>{if(r.emissaoDB&&r.emissaoDB.length===10){const mk=r.emissaoDB.substring(0,7);byM[mk]=(byM[mk]||0)+1}if(r.sicovabEnvio&&r.sicovabEnvio.length===10){const mk=r.sicovabEnvio.substring(0,7);bySic[mk]=(bySic[mk]||0)+1}});
     const mK=[...new Set([...Object.keys(byM),...Object.keys(bySic)])].sort();
     if($('#chMes'))charts.m=new Chart($('#chMes'),{type:'line',data:{labels:mK.map(k=>{const[y,m]=k.split('-');return MONTH_PT[+m-1]+'/'+y.slice(2)}),datasets:[{label:'Emitidas',data:mK.map(k=>byM[k]||0),borderColor:'#10b981',backgroundColor:'rgba(16,185,129,.12)',fill:true,tension:.35},{label:'Sicovab',data:mK.map(k=>bySic[k]||0),borderColor:'#3b82f6',borderDash:[4,4],tension:.35}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'bottom',labels:{boxWidth:10,font:{size:10}}}},scales:{y:{beginAtZero:true}}}});
-
     const buckets={'Até 5d':0,'6-10d':0,'11-15d':0,'16-20d':0,'+20d':0};
     recs.forEach(r=>{const d=Number(r.dias);if(isNaN(d)||d<=0)return;if(d<=5)buckets['Até 5d']++;else if(d<=10)buckets['6-10d']++;else if(d<=15)buckets['11-15d']++;else if(d<=20)buckets['16-20d']++;else buckets['+20d']++});
     if($('#chLeadTime'))charts.lt=new Chart($('#chLeadTime'),{type:'bar',data:{labels:Object.keys(buckets),datasets:[{data:Object.values(buckets),backgroundColor:['#10b981','#3b82f6','#6366f1','#f59e0b','#ef4444'],borderRadius:5}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{y:{beginAtZero:true}}}});
-
     const byB={};recs.forEach(r=>{const k=r.blindagem||'—';byB[k]=(byB[k]||0)+1});
     const bA=Object.entries(byB).sort((a,b)=>b[1]-a[1]).slice(0,7);
     if($('#chBlind'))charts.b=new Chart($('#chBlind'),{type:'doughnut',data:{labels:bA.map(x=>x[0].length>26?x[0].slice(0,26)+'…':x[0]),datasets:[{data:bA.map(x=>x[1]),backgroundColor:PAL}]},options:{responsive:true,maintainAspectRatio:false,cutout:'55%',plugins:{legend:{position:isMob?'bottom':'right',labels:{boxWidth:10,font:{size:9}}}}}});
-
     const byMod={};recs.forEach(r=>{const k=(r.veiculo||'—').trim();byMod[k]=(byMod[k]||0)+1});
     const modA=Object.entries(byMod).sort((a,b)=>b[1]-a[1]).slice(0,8);
     if($('#chModelos'))charts.mod=new Chart($('#chModelos'),{type:'bar',data:{labels:modA.map(x=>x[0].length>22?x[0].slice(0,22)+'…':x[0]),datasets:[{data:modA.map(x=>x[1]),backgroundColor:'#0d9488',borderRadius:5}]},options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}}}});
-
     const byC={};recs.forEach(r=>{const k=r.cliente||'—';byC[k]=(byC[k]||0)+1});
     const cA=Object.entries(byC).sort((a,b)=>b[1]-a[1]).slice(0,7);
     if($('#chCli'))charts.c=new Chart($('#chCli'),{type:'bar',data:{labels:cA.map(x=>x[0].length>22?x[0].slice(0,22)+'…':x[0]),datasets:[{data:cA.map(x=>x[1]),backgroundColor:'#8b5cf6',borderRadius:5}]},options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}}}});
-
     const byExc={};excRecs.forEach(r=>{const k=(r.exercito||'Não informado').trim();byExc[k]=(byExc[k]||0)+1});
     const excA=Object.entries(byExc).sort((a,b)=>b[1]-a[1]).slice(0,7);
     if($('#chExcStatus'))charts.exc=new Chart($('#chExcStatus'),{type:'bar',data:{labels:excA.map(x=>x[0].length>24?x[0].slice(0,24)+'…':x[0]),datasets:[{data:excA.map(x=>x[1]),backgroundColor:'#f59e0b',borderRadius:5}]},options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}}}});
@@ -2097,22 +2108,16 @@ async function init(){
     try{
       const emailVal=$('#loginEmail').value;
       const passVal=$('#loginPass').value;
-
       let res=tryLogin(emailVal,passVal);
-
       if(!res.ok&&!window.__dbReady){
-        btn.disabled=true;
-        btn.textContent='Carregando...';
+        btn.disabled=true; btn.textContent='Carregando...';
         try{await loadAllDatabases();ensureAdmin()}catch(e){}
         window.__dbReady=true;
-        btn.disabled=false;
-        btn.textContent='Entrar com Segurança';
+        btn.disabled=false; btn.textContent='Entrar com Segurança';
         res=tryLogin(emailVal,passVal);
       }
-
       if(!res.ok&&getCloudBaseUrl()){
-        btn.disabled=true;
-        btn.textContent='Sincronizando...';
+        btn.disabled=true; btn.textContent='Sincronizando...';
         try{await pullFromCloud(true)}catch(e){}
         res=tryLogin(emailVal,passVal);
         if(!res.ok){
@@ -2123,13 +2128,12 @@ async function init(){
             const idx=DB.usuarios.findIndex(x=>x.email.toLowerCase()===key);
             if(idx>=0)DB.usuarios[idx]=fresh;else DB.usuarios.push(fresh);
             DB.deletedUsers=(DB.deletedUsers||[]).filter(d=>d!==key);
-            DB.usuarios = cleanDuplicateUsers(DB.usuarios); // Limpa no login
+            DB.usuarios = cleanDuplicateUsers(DB.usuarios);
             try{await saveUsersVault()}catch(e){}
             res=tryLogin(emailVal,passVal);
           }
         }
-        btn.disabled=false;
-        btn.textContent='Entrar com Segurança';
+        btn.disabled=false; btn.textContent='Entrar com Segurança';
       }
       if(res.ok){
         $('#loginError').style.display='none';
@@ -2141,10 +2145,9 @@ async function init(){
         $('#loginError').style.display='block';
       }
     }catch(err){
-      btn.disabled=false;
-      btn.textContent='Entrar com Segurança';
+      btn.disabled=false; btn.textContent='Entrar com Segurança';
       const le=$('#loginError');
-      if(le){le.textContent='Não foi possível concluir o login neste dispositivo. Verifique sua conexão e tente novamente.';le.style.display='block'}
+      if(le){le.textContent='Não foi possível concluir o login neste dispositivo.';le.style.display='block'}
     }
   });
   $('#loginForm').addEventListener('keydown',function(e){if(e.key==='Enter'){e.preventDefault();$('#btnLogin').click()}});
@@ -2175,26 +2178,43 @@ async function init(){
   $('#btnDashClear').onclick=()=>{dashState.vend='';dashState.status='';$('#fDashVend').value='';$('#fDashStatus').value='';resetTemporalInputs('Dash',dashState);renderDashboard()};
 
   let deb;
-  $('#fSearch').addEventListener('input',e=>{clearTimeout(deb);deb=setTimeout(()=>{tableState.search=e.target.value;tableState.page=1;renderTable()},180)});
+  $('#fSearch').addEventListener('input',e=>{clearTimeout(deb);deb=setTimeout(()=>{tableState.search=e.target.value;tableState.page=1;renderTable()},100)});
   $('#fVend').onchange=e=>{tableState.vend=e.target.value;tableState.page=1;renderTable()};
   $('#fCliente').onchange=e=>{tableState.cli=e.target.value;tableState.page=1;renderTable()};
   $('#fBlind').onchange=e=>{tableState.blind=e.target.value;tableState.page=1;renderTable()};
   $('#fStatus').onchange=e=>{tableState.status=e.target.value;tableState.page=1;renderTable()};
   bindTemporalInputs('Rec',tableState,renderTable);
-  $('#btnClear').onclick=()=>{tableState={...tableState,search:'',vend:'',cli:'',blind:'',status:'',page:1};resetTemporalInputs('Rec',tableState);$('#fSearch').value='';$('#fStatus').value='';renderTable()};
+  $('#btnClear').onclick=()=>{
+    tableState.search=''; tableState.vend=''; tableState.cli=''; tableState.blind=''; tableState.status='';
+    tableState.dateField=''; tableState.date=''; tableState.month=''; tableState.year=''; tableState.from=''; tableState.to='';
+    tableState.page=1;
+    $('#fSearch').value=''; $('#fStatus').value=''; $('#fVend').value=''; $('#fCliente').value=''; $('#fBlind').value='';
+    $('#fRecDateField').value=''; $('#fRecDate').value=''; $('#fRecMonth').value=''; $('#fRecYear').value=''; $('#fRecFrom').value=''; $('#fRecTo').value='';
+    renderTable();
+    toast('✅ Todos os filtros foram limpos','ok');
+  };
   $('#btnExport').onclick=exportExcel;
 
-  $('#fExcSearch').addEventListener('input',e=>{clearTimeout(deb);deb=setTimeout(()=>{excState.search=e.target.value;excState.page=1;renderExcTable()},180)});
+  $('#fExcSearch').addEventListener('input',e=>{clearTimeout(deb);deb=setTimeout(()=>{excState.search=e.target.value;excState.page=1;renderExcTable()},100)});
   $('#fExcVend').onchange=e=>{excState.vend=e.target.value;excState.page=1;renderExcTable()};
   $('#fExcStatus').onchange=e=>{excState.status=e.target.value;excState.page=1;renderExcTable()};
   bindTemporalInputs('Exc',excState,renderExcTable);
-  $('#btnExcClear').onclick=()=>{excState={...excState,search:'',vend:'',status:'',dates:[],page:1};resetTemporalInputs('Exc',excState);$('#fExcSearch').value='';renderExcDateTags();renderExcTable()};
+  $('#btnExcClear').onclick=()=>{
+    excState.search=''; excState.vend=''; excState.status=''; excState.dates=[];
+    excState.dateField=''; excState.date=''; excState.month=''; excState.year=''; excState.from=''; excState.to='';
+    excState.page=1;
+    $('#fExcSearch').value=''; $('#fExcDateField').value=''; $('#fExcDate').value='';
+    $('#fExcMonth').value=''; $('#fExcYear').value=''; $('#fExcFrom').value=''; $('#fExcTo').value='';
+    renderExcDateTags();
+    renderExcTable();
+    toast('✅ Todos os filtros foram limpos','ok');
+  };
   $('#btnExcAddDate').onclick=addExcDate;
   $('#fExcDateInput').addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();addExcDate()}});
   renderExcDateTags();
   $('#btnExportExc').onclick=exportExc;
 
-  $('#fUniSearch').addEventListener('input',e=>{clearTimeout(deb);deb=setTimeout(()=>{uniState.search=e.target.value;uniState.page=1;renderUnified()},180)});
+  $('#fUniSearch').addEventListener('input',e=>{clearTimeout(deb);deb=setTimeout(()=>{uniState.search=e.target.value;uniState.page=1;renderUnified()},100)});
   $('#fUniVend').onchange=e=>{uniState.vend=e.target.value;uniState.page=1;renderUnified()};
   $('#fUniStatus').onchange=e=>{uniState.status=e.target.value;uniState.page=1;renderUnified()};
   bindTemporalInputs('Uni',uniState,renderUnified);
@@ -2225,7 +2245,7 @@ async function init(){
   window.__dbReady=true;
   ensureAdmin();
   [...(DB.declaracoes||[]).map(r=>r.vendedor),...(DB.autorizacoes||[]).map(r=>r.vendedor)].filter(Boolean).forEach(ensureVendedorUser);
-  DB.usuarios = cleanDuplicateUsers(DB.usuarios); // Limpa ao iniciar
+  DB.usuarios = cleanDuplicateUsers(DB.usuarios);
   await saveLocalOnly();
   applyTheme();
   populateYearSelects();
