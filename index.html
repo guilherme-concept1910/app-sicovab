@@ -12,7 +12,6 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 <script id="cbs-embedded-data" type="application/json">null</script>
 <style>
-/* [ESTILOS MANTIDOS - Omitidos aqui para não alongar, use os mesmos do código anterior] */
 :root{--bg:#eef2f7;--surface:#fff;--surface2:#f6f8fb;--border:#dde4ee;--text:#0f172a;--text2:#47566e;--muted:#8b98ad;--primary:#1e40af;--primary2:#16337f;--accent:#3b82f6;--accent-soft:#e7effd;--green:#059669;--green-soft:#e3f6ef;--amber:#c47f17;--amber-soft:#fdf3e1;--red:#dc2626;--red-soft:#fdeaea;--purple:#7c3aed;--purple-soft:#f0eafc;--teal:#0d9488;--teal-soft:#e6f7f5;--sidebar:#0c1b3f;--sidebar2:#12244f;--sidebar-text:#c9d4ec;--shadow:0 1px 3px rgba(15,23,42,.07),0 8px 24px rgba(15,23,42,.05);--shadow-lg:0 10px 40px rgba(15,23,42,.14);--radius:12px}
 [data-theme="dark"]{--bg:#0a1120;--surface:#121b2e;--surface2:#182338;--border:#243250;--text:#e8eef8;--text2:#aab8d2;--muted:#66769a;--accent-soft:#16264a;--green-soft:#0d2b22;--amber-soft:#2c2107;--red-soft:#331316;--purple-soft:#241442;--teal-soft:#0d2b29;--sidebar:#081226;--sidebar2:#0e1c3a;--sidebar-text:#b9c6e2}
 *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
@@ -198,7 +197,6 @@ td.os{font-family:'JetBrains Mono',monospace;font-weight:600;color:var(--primary
 .mob-nav-btn{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;font-size:9.5px;font-weight:600;color:var(--muted);border-radius:8px;padding:4px 2px}
 .mob-nav-btn svg{width:18px;height:18px}
 .mob-nav-btn.active{color:var(--primary);background:var(--accent-soft)}
-/* ESTILOS NOVOS PARA O HISTÓRICO */
 .history-list { max-height: 200px; overflow-y: auto; margin-top: 10px; }
 .history-item { font-size: 11px; padding: 8px; border-bottom: 1px dashed var(--border); display: flex; flex-direction: column; gap: 4px; }
 .history-item b { color: var(--primary); }
@@ -265,7 +263,6 @@ input,select,textarea{font-size:16px}
 <base target="_blank">
 </head>
 <body>
-<!-- O CONTEÚDO DO BODY É O MESMO DO CÓDIGO ANTERIOR -->
 <div id="loginView" class="login-wrap">
 <div class="login-card">
 <div class="login-logo">
@@ -341,6 +338,10 @@ input,select,textarea{font-size:16px}
 <span id="storageBadge" style="color:var(--green)">🔒 Cofre Criptografado Ativo</span>
 </div>
 <section id="view-dashboard">
+<div id="dash-alert-banner" class="hidden" style="margin-bottom:14px; padding:12px 16px; background:var(--red-soft); border:1px solid var(--red); border-radius:8px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
+  <div style="color:var(--red); font-weight:600; font-size:13px;">🚨 Log de Atenção: Você possui <span id="alert-count">0</span> prazos críticos!</div>
+  <button class="btn btn-sm" style="background:var(--red); color:#fff;" onclick="openAlertsModal()">Ver Log Completo</button>
+</div>
 <div class="temporal-bar">
 <div class="temporal-group"><label>Vendedor</label><select id="fDashVend"><option value="">Vendedor: todos</option></select></div>
 <div class="temporal-group"><label>Status D.B</label><select id="fDashStatus"><option value="">Status: todos</option><option value="emitido">Emitidas</option><option value="pendente">Pendentes (No Prazo)</option><option value="atrasado">Atrasadas</option></select></div>
@@ -350,6 +351,9 @@ input,select,textarea{font-size:16px}
 <div class="temporal-group"><label>Ano</label><select id="fDashYear" class="year-select"><option value="">Ano: todos</option></select></div>
 <div class="temporal-group full-mob"><label>Período (De — Até)</label><div class="temporal-period"><input type="date" id="fDashFrom" title="Data inicial"><span>até</span><input type="date" id="fDashTo" title="Data final"></div></div>
 <button class="btn btn-ghost btn-sm" id="btnDashClear" style="height:32px">Limpar filtros</button>
+</div>
+<div style="display:flex;justify-content:flex-end;margin-bottom:14px;">
+  <button class="btn btn-primary" onclick="exportDashboardPDF()" id="btnDashPDF">📄 Baixar Relatório Gerencial (PDF)</button>
 </div>
 <div class="kpi-grid">
 <div class="card kpi"><div class="kpi-ico" style="background:var(--accent-soft);color:var(--accent)"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg></div><span class="lbl">Total de D.Bs</span><span class="val" id="kTotal">0</span><span class="hint" id="kTotalHint">registros filtrados</span></div>
@@ -501,7 +505,6 @@ input,select,textarea{font-size:16px}
 // ========== REGISTRO DO SERVICE WORKER (PWA) ==========
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
-    // Um service worker básico embutido para permitir instalação PWA sem arquivo extra
     const swCode = `self.addEventListener('install', (e) => { self.skipWaiting(); }); self.addEventListener('activate', (e) => { e.waitUntil(clients.claim()); }); self.addEventListener('fetch', (e) => { e.respondWith(fetch(e.request).catch(() => caches.match(e.request))); });`;
     const blob = new Blob([swCode], {type: 'application/javascript'});
     const swUrl = URL.createObjectURL(blob);
@@ -902,6 +905,246 @@ function iniciarTempoReal(){
 }
 // ===================================
 
+// =============== LOG DE PRAZOS CRÍTICOS (POPUP + BANNER) ===============
+function getProcessosCriticos() {
+    if(!currentUser) return { dbs: [], auts: [] };
+    const hoje = todayISO();
+    const limite3d = addDaysISO(hoje, 3);
+
+    const dbsCriticas = visibleRecords().filter(r => {
+        const st = recStatus(r);
+        if(st === 'atrasado') return true;
+        if(st === 'pendente' && r.prazoEmissaoDB && r.prazoEmissaoDB <= limite3d) return true;
+        return false;
+    });
+
+    const excCriticas = visibleExc().filter(r => {
+        if(r.dataEmissao) return false;
+        if(r.prazoEmissao && r.prazoEmissao <= limite3d) return true;
+        return false;
+    });
+
+    return { dbs: dbsCriticas, auts: excCriticas };
+}
+
+function checkPrazosCriticos() {
+    if(!currentUser) return;
+    const criticas = getProcessosCriticos();
+    const total = criticas.dbs.length + criticas.auts.length;
+
+    if (total > 0) {
+        if(!sessionStorage.getItem('cbs_alert_shown')) {
+            sessionStorage.setItem('cbs_alert_shown', 'true');
+            openModal(`
+                <div class="modal-head"><h3 style="color:var(--red)">🚨 Atenção: Prazos Críticos</h3><button class="modal-close" onclick="closeModal()">✕</button></div>
+                <div class="modal-body">
+                    <p style="margin-bottom:15px;font-weight:600">Você tem <b>${total}</b> processos com prazo vencido ou vencendo nos próximos 3 dias.</p>
+                    <p style="font-size:12px;color:var(--muted)">Um log detalhado foi fixado no topo do seu Dashboard.</p>
+                </div>
+                <div class="modal-foot">
+                    <button class="btn btn-primary" onclick="closeModal(); openAlertsModal()">Ver Log Completo</button>
+                </div>
+            `, false, 'narrow');
+        }
+    }
+}
+
+window.openAlertsModal = function() {
+    const criticas = getProcessosCriticos();
+    let html = '<div class="modal-head"><h3>🚨 Log de Prazos Críticos</h3><button class="modal-close" onclick="closeModal()">✕</button></div><div class="modal-body">';
+    
+    if(criticas.dbs.length > 0) {
+        html += '<h4 style="color:var(--red);font-size:12px;margin-bottom:5px;">Declarações de Blindagem (D.Bs)</h4><ul style="padding-left:20px;font-size:11px;line-height:1.8;margin-bottom:15px;">';
+        criticas.dbs.forEach(c => { html += `<li><b>OS ${esc(c.os)}</b> - ${esc(c.cliente)} (Prazo: ${fmtDate(c.prazoEmissaoDB)})</li>`; });
+        html += '</ul>';
+    }
+    
+    if(criticas.auts.length > 0) {
+        html += '<h4 style="color:var(--amber);font-size:12px;margin-bottom:5px;">Autorizações Pendentes</h4><ul style="padding-left:20px;font-size:11px;line-height:1.8;">';
+        criticas.auts.forEach(c => { html += `<li><b>OS ${esc(c.os)}</b> - ${esc(c.cliente)} (Prazo: ${fmtDate(c.prazoEmissao)})</li>`; });
+        html += '</ul>';
+    }
+
+    if(criticas.dbs.length === 0 && criticas.auts.length === 0) {
+        html += '<p style="text-align:center;padding:20px;color:var(--green)">✅ Nenhum prazo crítico no momento!</p>';
+    }
+    
+    html += '</div><div class="modal-foot"><button class="btn btn-primary" onclick="closeModal()">Fechar Log</button></div>';
+    openModal(html, false, 'narrow');
+};
+
+function renderDashAlerts() {
+    if(!currentUser) return;
+    const banner = document.getElementById('dash-alert-banner');
+    if(!banner) return;
+
+    const criticas = getProcessosCriticos();
+    const total = criticas.dbs.length + criticas.auts.length;
+
+    if(total > 0) {
+        banner.classList.remove('hidden');
+        document.getElementById('alert-count').textContent = total;
+    } else {
+        banner.classList.add('hidden');
+    }
+}
+// =======================================================================
+
+// =============== RELATÓRIO PDF DO DASHBOARD ===============
+window.exportDashboardPDF = async function() {
+    const btn = document.getElementById('btnDashPDF');
+    if(btn) { btn.innerHTML = 'Gerando PDF...'; btn.disabled = true; }
+
+    const content = document.createElement('div');
+    content.style.cssText = 'font-family:sans-serif;color:#000;padding:20px;background:#fff;width:800px;';
+    
+    // Cabeçalho
+    content.innerHTML = `
+      <div style="text-align:center;margin-bottom:20px;border-bottom:2px solid #1e40af;padding-bottom:10px">
+        <h2 style="margin:0;color:#1e40af;font-size:24px">Concept Be Safe</h2>
+        <p style="margin:5px 0 0 0;font-size:14px">Relatório Gerencial - ${new Date().toLocaleDateString('pt-BR')}</p>
+      </div>
+    `;
+
+    // Clona os KPIs visíveis
+    const kpis = document.querySelector('.kpi-grid').cloneNode(true);
+    kpis.querySelectorAll('.kpi-ico').forEach(el => el.remove());
+    content.innerHTML += `<h3 style="color:#0f172a;border-bottom:1px solid #ccc;padding-bottom:5px;margin-top:20px">Indicadores</h3>`;
+    content.innerHTML += kpis.outerHTML;
+
+    // Clona a tabela de Vendedores
+    const tableWrap = document.querySelector('.dash-bottom-grid .card').cloneNode(true);
+    content.innerHTML += `<h3 style="color:#0f172a;border-bottom:1px solid #ccc;padding-bottom:5px;margin-top:20px">Desempenho por Vendedor</h3>`;
+    content.innerHTML += tableWrap.innerHTML;
+
+    // Configuração do PDF
+    const opt = {
+        margin:       10,
+        filename:     `Relatorio_Gerencial_${todayISO()}.pdf`,
+        image:        { type: 'jpeg', quality: 0.98 },
+        html2canvas:  { scale: 2, useCORS: true },
+        jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
+    };
+    
+    // Gera o PDF
+    html2pdf().set(opt).from(content).save().then(() => {
+        if(btn) { btn.innerHTML = '📄 Baixar Relatório Gerencial (PDF)'; btn.disabled = false; }
+    });
+};
+// =======================================================
+
+// =============== FUNÇÕES DE EDIÇÃO E PDF DA OS ===============
+window.salvarNota = async function(os) {
+    const notaInput = document.getElementById('notaOS');
+    const nota = notaInput.value.trim();
+    if(!nota) return toast('Digite uma anotação primeiro.', 'err');
+    
+    const idx = DB.declaracoes.findIndex(r => String(r.os) === String(os));
+    if(idx >= 0) {
+        if(!DB.declaracoes[idx].history) DB.declaracoes[idx].history = [];
+        DB.declaracoes[idx].history.push({
+            data: new Date().toISOString(),
+            autor: currentUser.name || currentUser.email,
+            texto: nota
+        });
+        notaInput.value = '';
+        await saveDB('all');
+        openDetail(DB.declaracoes[idx]);
+        toast('Anotação salva com sucesso!');
+    }
+};
+
+window.gerarPDF = function(os) {
+    const el = document.getElementById('modal-pdf-content');
+    if(!el) return;
+    const opt = { margin: 10, filename: `OS_${os}.pdf`, image: { type: 'jpeg', quality: 0.98 }, html2canvas: { scale: 2 }, jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' } };
+    const btn = document.getElementById('btnGerarPDF');
+    if(btn) { btn.innerHTML = 'Gerando...'; btn.disabled = true; }
+    html2pdf().set(opt).from(el).save().then(() => { if(btn) { btn.innerHTML = '📄 PDF'; btn.disabled = false; } });
+};
+
+window.openEditOS = function(os) {
+   const r = DB.declaracoes.find(x => String(x.os) === String(os));
+   if(!r) return;
+   openModal(`
+     <div class="modal-head"><h3>✏️ Editar OS ${esc(r.os)}</h3><button class="modal-close" onclick="closeModal()">✕</button></div>
+     <div class="modal-body">
+       <div class="fg"><label>Cliente</label><input id="editCli" value="${esc(r.cliente||'')}"></div>
+       <div class="fg"><label>Veículo</label><input id="editVeic" value="${esc(r.veiculo||'')}"></div>
+       <div class="fg"><label>Blindagem</label><input id="editBlind" value="${esc(r.blindagem||'')}"></div>
+       <div class="fg"><label>Prazo Emissão D.B</label><input type="date" id="editPrazo" value="${esc(r.prazoEmissaoDB||'')}"></div>
+       <div class="fg"><label>Emissão D.B</label><input type="date" id="editEmissao" value="${esc(r.emissaoDB||'')}"></div>
+       <div class="fg"><label>Observações Gerais</label><textarea id="editObs" rows="3">${esc(r.observacoes||'')}</textarea></div>
+     </div>
+     <div class="modal-foot"><button class="btn btn-ghost" onclick="closeModal()">Cancelar</button><button class="btn btn-primary" onclick="salvarEdicaoOS('${esc(r.os)}')">Salvar e Sincronizar</button></div>
+   `, false, 'narrow');
+};
+
+window.salvarEdicaoOS = async function(os) {
+   const idx = DB.declaracoes.findIndex(x => String(x.os) === String(os));
+   if(idx < 0) return;
+   DB.declaracoes[idx].cliente = document.getElementById('editCli').value.trim();
+   DB.declaracoes[idx].veiculo = document.getElementById('editVeic').value.trim();
+   DB.declaracoes[idx].blindagem = document.getElementById('editBlind').value.trim();
+   DB.declaracoes[idx].prazoEmissaoDB = document.getElementById('editPrazo').value;
+   DB.declaracoes[idx].emissaoDB = document.getElementById('editEmissao').value;
+   DB.declaracoes[idx].observacoes = document.getElementById('editObs').value.trim();
+   DB.declaracoes[idx].lastModified = new Date().toISOString();
+   DB.declaracoes[idx].modifiedBy = currentUser.name || currentUser.email;
+   await saveDB('all');
+   closeModal();
+   openDetail(DB.declaracoes[idx]);
+   toast('OS atualizada com sucesso!');
+};
+// ===============================================================
+
+// =============== FUNÇÕES DE EDIÇÃO E PDF DA AUTORIZAÇÃO ===============
+window.gerarPDFExc = function(os) {
+    const el = document.getElementById('modal-pdf-exc-content');
+    if(!el) return;
+    const opt = { margin: 10, filename: `Aut_OS_${os}.pdf`, image: { type: 'jpeg', quality: 0.98 }, html2canvas: { scale: 2 }, jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' } };
+    const btn = document.getElementById('btnGerarPDFExc');
+    if(btn) { btn.innerHTML = 'Gerando...'; btn.disabled = true; }
+    html2pdf().set(opt).from(el).save().then(() => { if(btn) { btn.innerHTML = '📄 PDF'; btn.disabled = false; } });
+};
+
+window.openEditExc = function(os) {
+   const r = DB.autorizacoes.find(x => String(x.os) === String(os));
+   if(!r) return;
+   openModal(`
+     <div class="modal-head"><h3>✏️ Editar Aut. ${esc(r.os)}</h3><button class="modal-close" onclick="closeModal()">✕</button></div>
+     <div class="modal-body">
+       <div class="fg"><label>Cliente</label><input id="editExcCli" value="${esc(r.cliente||'')}"></div>
+       <div class="fg"><label>Vendedor</label><input id="editExcVend" value="${esc(r.vendedor||'')}"></div>
+       <div class="fg"><label>Modelo</label><input id="editExcModelo" value="${esc(r.modelo||'')}"></div>
+       <div class="fg"><label>Status Exército</label><input id="editExcStatus" value="${esc(r.exercito||'')}"></div>
+       <div class="fg"><label>Prazo Emissão</label><input type="date" id="editExcPrazo" value="${esc(r.prazoEmissao||'')}"></div>
+       <div class="fg"><label>Data Emissão</label><input type="date" id="editExcEmissao" value="${esc(r.dataEmissao||'')}"></div>
+       <div class="fg"><label>Observações</label><textarea id="editExcObs" rows="3">${esc(r.observacao||'')}</textarea></div>
+     </div>
+     <div class="modal-foot"><button class="btn btn-ghost" onclick="closeModal()">Cancelar</button><button class="btn btn-primary" onclick="salvarEdicaoExc('${esc(r.os)}')">Salvar e Sincronizar</button></div>
+   `, false, 'narrow');
+};
+
+window.salvarEdicaoExc = async function(os) {
+   const idx = DB.autorizacoes.findIndex(x => String(x.os) === String(os));
+   if(idx < 0) return;
+   DB.autorizacoes[idx].cliente = document.getElementById('editExcCli').value.trim();
+   DB.autorizacoes[idx].vendedor = document.getElementById('editExcVend').value.trim();
+   DB.autorizacoes[idx].modelo = document.getElementById('editExcModelo').value.trim();
+   DB.autorizacoes[idx].exercito = document.getElementById('editExcStatus').value.trim();
+   DB.autorizacoes[idx].prazoEmissao = document.getElementById('editExcPrazo').value;
+   DB.autorizacoes[idx].dataEmissao = document.getElementById('editExcEmissao').value;
+   DB.autorizacoes[idx].observacao = document.getElementById('editExcObs').value.trim();
+   DB.autorizacoes[idx].lastModified = new Date().toISOString();
+   DB.autorizacoes[idx].modifiedBy = currentUser.name || currentUser.email;
+   await saveDB('all');
+   closeModal();
+   openExcDetail(DB.autorizacoes[idx]);
+   toast('Autorização atualizada com sucesso!');
+};
+// =======================================================================
+
 function refreshActiveScreen(){
   if(!currentUser)return;
   const updatedMe=DB.usuarios.find(u=>u.email.toLowerCase()===currentUser.email.toLowerCase());
@@ -1212,50 +1455,6 @@ function openChangePassword(forced){
   };
 }
 
-// =============== FUNÇÕES NOVAS DE HISTÓRICO E PDF ===============
-window.salvarNota = async function(os) {
-    const notaInput = document.getElementById('notaOS');
-    const nota = notaInput.value.trim();
-    if(!nota) return toast('Digite uma anotação primeiro.', 'err');
-    
-    const idx = DB.declaracoes.findIndex(r => String(r.os) === String(os));
-    if(idx >= 0) {
-        if(!DB.declaracoes[idx].history) DB.declaracoes[idx].history = [];
-        DB.declaracoes[idx].history.push({
-            data: new Date().toISOString(),
-            autor: currentUser.name || currentUser.email,
-            texto: nota
-        });
-        notaInput.value = '';
-        await saveDB('all');
-        // Reabre o modal atualizado
-        openDetail(DB.declaracoes[idx]);
-        toast('Anotação salva com sucesso!');
-    }
-};
-
-window.gerarPDF = function(os) {
-    const el = document.getElementById('modal-pdf-content');
-    if(!el) return;
-    
-    const opt = {
-        margin:       10,
-        filename:     `OS_${os}.pdf`,
-        image:        { type: 'jpeg', quality: 0.98 },
-        html2canvas:  { scale: 2 },
-        jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
-    };
-    
-    // Mostra um loading
-    const btn = document.getElementById('btnGerarPDF');
-    if(btn) { btn.innerHTML = 'Gerando...'; btn.disabled = true; }
-    
-    html2pdf().set(opt).from(el).save().then(() => {
-        if(btn) { btn.innerHTML = '📄 Baixar PDF'; btn.disabled = false; }
-    });
-};
-// ===============================================================
-
 function openDetail(r){
   const st=recStatus(r);
   const cell=(k,v,m)=>'<div class="detail-cell"><div class="k">'+k+'</div><div class="v '+(m?'mono ':'')+' '+(v?'':'empty-v')+'">'+(v||'não informado')+'</div></div>';
@@ -1270,12 +1469,12 @@ function openDetail(r){
   openModal(`
     <div class="modal-head">
       <h3 class="mono" style="font-size:14px">OS ${esc(r.os||'—')}</h3>
-      <button class="btn btn-ghost btn-sm" id="btnGerarPDF" onclick="gerarPDF('${esc(r.os)}')" style="margin-right:8px">📄 Baixar PDF</button>
+      <button class="btn btn-ghost btn-sm" id="btnGerarPDF" onclick="gerarPDF('${esc(r.os)}')" style="margin-right:4px">📄 PDF</button>
+      <button class="btn btn-primary btn-sm" onclick="openEditOS('${esc(r.os)}')" style="margin-right:8px">✏️ Editar</button>
       <button class="modal-close" onclick="closeModal()">✕</button>
     </div>
     
     <div class="modal-body" id="modal-pdf-content" style="background:var(--surface)">
-      <!-- Cabeçalho para o PDF -->
       <div style="text-align:center;margin-bottom:20px;border-bottom:2px solid var(--primary);padding-bottom:10px">
         <h2 style="margin:0;color:var(--primary);font-size:18px">Concept Be Safe</h2>
         <p style="margin:0;font-size:12px;color:var(--muted)">Relatório da Declaração de Blindagem</p>
@@ -1290,12 +1489,11 @@ function openDetail(r){
       
       ${r.observacoes?'<div style="margin-top:12px;padding:10px;background:var(--surface2);border-radius:8px;font-size:11px;border:1px solid var(--border)"><b>Obs:</b> '+esc(r.observacoes)+'</div>':''}
       
-      <!-- Seção de Histórico/Anotações -->
       <div style="margin-top:20px; border-top: 1px dashed var(--border); padding-top:15px">
         <h4 style="font-size:12px; margin-bottom:8px; color:var(--primary)">📝 Histórico de Anotações</h4>
         <div class="history-list">${historyHtml}</div>
         
-        <div style="display:flex; gap:8px; margin-top:12px">
+        <div style="display:flex; gap:8px; margin-top:12px" class="no-print">
           <input type="text" id="notaOS" placeholder="Adicionar uma anotação a esta OS..." style="flex:1; font-size:12px; padding:8px">
           <button class="btn btn-primary btn-sm" onclick="salvarNota('${esc(r.os)}')">Salvar</button>
         </div>
@@ -1303,9 +1501,33 @@ function openDetail(r){
     </div>
   `,true)
 }
-// =========================================================
 
-function openExcDetail(r){const cell=(k,v,m)=>'<div class="detail-cell"><div class="k">'+k+'</div><div class="v '+(m?'mono ':'')+' '+(v?'':'empty-v')+'">'+(v||'não informado')+'</div></div>';openModal('<div class="modal-head"><h3 class="mono" style="font-size:14px">OS '+esc(r.os||'—')+' — Autorização Pendente</h3><button class="modal-close" onclick="closeModal()">✕</button></div><div class="modal-body"><div class="detail-grid">'+cell('Cliente',esc(r.cliente))+cell('Vendedor',esc(r.vendedor))+cell('Status Exército',esc(r.exercito))+cell('Modelo',esc(r.modelo))+cell('Chassi',esc(r.chassi),1)+cell('Data Coleta',fmtDate(r.dataColeta),1)+cell('Envio Sicovab',fmtDate(r.envioSicovab),1)+cell('Prazo Emissão',fmtDate(r.prazoEmissao),1)+cell('Prazo 9 Dias',fmtDate(r.prazo9dias),1)+cell('Prev. 07 Dias',fmtDate(r.dtaPrev07),1)+cell('Prev. 09 Dias',fmtDate(r.dtaPrev09),1)+cell('Data Emissão',fmtDate(r.dataEmissao),1)+cell('Dias',r.dias!=null&&r.dias!==''?String(r.dias):'',1)+cell('Pedido Compra',esc(r.pedidoCompra))+'</div>'+(r.observacao?'<div style="margin-top:12px;padding:10px;background:var(--surface2);border-radius:8px;font-size:11px"><b>Obs:</b> '+esc(r.observacao)+'</div>':'')+'</div>',true)}
+function openExcDetail(r){
+  const cell=(k,v,m)=>'<div class="detail-cell"><div class="k">'+k+'</div><div class="v '+(m?'mono ':'')+' '+(v?'':'empty-v')+'">'+(v||'não informado')+'</div></div>';
+  
+  openModal(`
+    <div class="modal-head">
+      <h3 class="mono" style="font-size:14px">OS ${esc(r.os||'—')} — Autorização</h3>
+      <button class="btn btn-ghost btn-sm" onclick="gerarPDFExc('${esc(r.os)}')" style="margin-right:4px">📄 PDF</button>
+      <button class="btn btn-primary btn-sm" onclick="openEditExc('${esc(r.os)}')" style="margin-right:8px">✏️ Editar</button>
+      <button class="modal-close" onclick="closeModal()">✕</button>
+    </div>
+    <div class="modal-body" id="modal-pdf-exc-content" style="background:var(--surface)">
+      <div style="text-align:center;margin-bottom:20px;border-bottom:2px solid var(--primary);padding-bottom:10px">
+        <h2 style="margin:0;color:var(--primary);font-size:18px">Concept Be Safe</h2>
+        <p style="margin:0;font-size:12px;color:var(--muted)">Relatório de Autorização Pendente</p>
+      </div>
+      <div class="detail-grid">
+        ${cell('Cliente',esc(r.cliente))}${cell('Vendedor',esc(r.vendedor))}${cell('Status Exército',esc(r.exercito))}${cell('Modelo',esc(r.modelo))}
+        ${cell('Chassi',esc(r.chassi),1)}${cell('Data Coleta',fmtDate(r.dataColeta),1)}${cell('Envio Sicovab',fmtDate(r.envioSicovab),1)}${cell('Prazo Emissão',fmtDate(r.prazoEmissao),1)}
+        ${cell('Prazo 9 Dias',fmtDate(r.prazo9dias),1)}${cell('Prev. 07 Dias',fmtDate(r.dtaPrev07),1)}${cell('Prev. 09 Dias',fmtDate(r.dtaPrev09),1)}${cell('Data Emissão',fmtDate(r.dataEmissao),1)}
+        ${cell('Dias',r.dias!=null&&r.dias!==''?String(r.dias):'',1)}${cell('Pedido Compra',esc(r.pedidoCompra))}
+      </div>
+      ${r.observacao?'<div style="margin-top:12px;padding:10px;background:var(--surface2);border-radius:8px;font-size:11px;border:1px solid var(--border)"><b>Obs:</b> '+esc(r.observacao)+'</div>':''}
+    </div>
+  `,true)
+}
+
 function openUnifiedDetail(r){const cell=(k,v,m)=>'<div class="detail-cell"><div class="k">'+k+'</div><div class="v '+(m?'mono ':'')+' '+(v?'':'empty-v')+'">'+(v||'não informado')+'</div></div>';let dbsSection='',autSection='';if(r.dbs){dbsSection='<h4 style="margin:16px 0 8px;font-size:13px;color:var(--accent)">📄 Declaração de Blindagem</h4><div class="detail-grid">'+cell('Veículo',esc(r.dbs.veiculo))+cell('Blindagem',esc(r.dbs.blindagem))+cell('Autorização',fmtDate(r.dbs.autorizacao),1)+cell('Emissão Termo',fmtDate(r.dbs.emissaoTermo),1)+cell('Envio Sicovab',fmtDate(r.dbs.sicovabEnvio),1)+cell('Prazo D.B',fmtDate(r.dbs.prazoEmissaoDB),1)+cell('Emissão D.B',fmtDate(r.dbs.emissaoDB),1)+cell('Dias',r.dbs.dias!=null?String(r.dbs.dias):'',1)+'</div>'}if(r.aut){autSection='<h4 style="margin:16px 0 8px;font-size:13px;color:var(--amber)">🛡️ Autorização Pendente</h4><div class="detail-grid">'+cell('Modelo',esc(r.aut.modelo))+cell('Status',esc(r.aut.exercito))+cell('Data Coleta',fmtDate(r.aut.dataColeta),1)+cell('Envio Sicovab',fmtDate(r.aut.envioSicovab),1)+cell('Prazo Emissão',fmtDate(r.aut.prazoEmissao),1)+cell('Data Emissão',fmtDate(r.aut.dataEmissao),1)+cell('Dias',r.aut.dias!=null?String(r.aut.dias):'',1)+cell('Pedido',esc(r.aut.pedidoCompra))+'</div>'}openModal('<div class="modal-head"><h3 class="mono" style="font-size:14px">OS '+esc(r.os)+' — Visão Completa</h3><button class="modal-close" onclick="closeModal()">✕</button></div><div class="modal-body"><div class="detail-grid">'+cell('Cliente',esc(r.cliente))+cell('Vendedor',esc(r.vendedor))+'</div>'+dbsSection+autSection+'</div>',true,'wide')}
 
 function renderUsers(){
@@ -1420,6 +1642,7 @@ function enterApp(){
   populateYearSelects();
   navigate('dashboard');
   updateBarRender();
+  setTimeout(checkPrazosCriticos, 1500);
 }
 function applyTheme(){const t=DB.config.theme||'light';document.documentElement.setAttribute('data-theme',t);$('#themeLabel').textContent=t==='dark'?'Modo claro':'Modo escuro';if(currentUser)renderDashboard()}
 
@@ -1549,6 +1772,7 @@ function renderDashboard(){
     }).join('');
   }
 
+  renderDashAlerts();
   renderCharts(recs,excRecs);
   renderDashTables(recs,excRecs);
   updateBarRender();
