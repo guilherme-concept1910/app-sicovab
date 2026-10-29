@@ -201,6 +201,13 @@ td.os{font-family:'JetBrains Mono',monospace;font-weight:600;color:var(--primary
 .history-item { font-size: 11px; padding: 8px; border-bottom: 1px dashed var(--border); display: flex; flex-direction: column; gap: 4px; }
 .history-item b { color: var(--primary); }
 .history-date { font-size: 9px; color: var(--muted); font-family: 'JetBrains Mono', monospace;}
+/* BULK ACTIONS */
+.bulk-bar { position: sticky; bottom: 20px; background: var(--primary); color: #fff; padding: 10px 20px; border-radius: 30px; display: flex; align-items: center; gap: 15px; box-shadow: 0 4px 12px rgba(0,0,0,0.3); z-index: 100; justify-content: center; margin: 10px auto; width: fit-content; flex-wrap: wrap;}
+.bulk-bar span { font-size: 13px; font-weight: bold; }
+.bulk-bar button { background: #fff; color: var(--primary); padding: 6px 12px; border-radius: 15px; font-weight: bold; border: none; cursor: pointer; font-size: 11px;}
+.bulk-bar button:hover { background: var(--accent-soft); }
+.bulk-bar button.danger { color: var(--red); }
+
 @media(max-width:1100px){.dash-bottom-grid{grid-template-columns:1fr}}
 @media(max-width:960px){
 .sidebar{transform:translateX(-100%);width:260px;box-shadow:var(--shadow-lg)}
@@ -431,6 +438,12 @@ input,select,textarea{font-size:16px}
 <div class="temporal-group full-mob"><label>Período (De — Até)</label><div class="temporal-period"><input type="date" id="fRecFrom" title="Data inicial"><span>até</span><input type="date" id="fRecTo" title="Data final"></div></div>
 </div>
 <div class="table-wrap"><table><thead><tr id="theadRow"></tr></thead><tbody id="tbodyRec"></tbody></table></div>
+<div id="bulk-actions-dbs" class="bulk-bar hidden">
+  <span><b id="bulk-count-dbs">0</b> selecionadas</span>
+  <button onclick="bulkUpdateDbs('sicovabEnvio')">Enviar Sicovab Hoje</button>
+  <button onclick="bulkUpdateDbs('emissaoDB')">Emitir D.B Hoje</button>
+  <button class="danger" onclick="clearSelectionDbs()">Cancelar</button>
+</div>
 <div class="pagination"><span class="pg-info" id="pgInfo"></span><div class="pg-btns" id="pgBtns"></div></div>
 </div>
 </section>
@@ -456,6 +469,12 @@ input,select,textarea{font-size:16px}
 <div class="temporal-group full-mob"><label>Período (De — Até)</label><div class="temporal-period"><input type="date" id="fExcFrom" title="Data inicial"><span>até</span><input type="date" id="fExcTo" title="Data final"></div></div>
 </div>
 <div class="table-wrap"><table style="min-width:1200px"><thead><tr id="excHeadRow"></tr></thead><tbody id="excBody"></tbody></table></div>
+<div id="bulk-actions-exc" class="bulk-bar hidden">
+  <span><b id="bulk-count-exc">0</b> selecionadas</span>
+  <button onclick="bulkUpdateExc('envioSicovab')">Enviar Sicovab Hoje</button>
+  <button onclick="bulkUpdateExc('dataEmissao')">Emitir Aut. Hoje</button>
+  <button class="danger" onclick="clearSelectionExc()">Cancelar</button>
+</div>
 <div class="pagination"><span class="pg-info" id="excPgInfo"></span><div class="pg-btns" id="excPgBtns"></div></div>
 </div>
 </section>
@@ -557,6 +576,8 @@ let excState={search:'',vend:'',status:'',dates:[],dateField:'',date:'',month:''
 let uniState={search:'',vend:'',status:'',dateField:'',date:'',month:'',year:'',from:'',to:'',page:1,perPage:25};
 let pendingDbs=null,pendingAut=null,pendingFileNameDbs='',pendingFileNameAut='';
 let importModeDbs='merge',importModeAut='merge';
+let selectedDbs = new Set();
+let selectedExc = new Set();
 
 async function fetchWithTimeout(url,options={},timeoutMs=3000){
   const ctrl=new AbortController();
@@ -584,6 +605,48 @@ function getUserStamp(u){
   const t2=u.passwordLastChanged?new Date(u.passwordLastChanged).getTime():0;
   return Math.max(isNaN(t1)?0:t1,isNaN(t2)?0:t2);
 }
+
+// =============== ANTI-DUPLICIDADE DE USUÁRIOS ===============
+function cleanDuplicateUsers(users) {
+  if (!Array.isArray(users)) return [];
+  const map = new Map();
+  
+  users.forEach(u => {
+    if (!u || !u.email) return;
+    const email = u.email.trim().toLowerCase();
+    // Normaliza o prefixo do email (ex: flavia.silva -> flaviasilva)
+    const prefix = normIdentity(vendName(email)); 
+    const normName = normIdentity(u.name);
+    
+    // Chave de agrupamento: prefixo do email normalizado ou nome normalizado
+    const key = prefix || normName || email; 
+    
+    if (!map.has(key)) {
+      map.set(key, u);
+    } else {
+      const cur = map.get(key);
+      const sCur = getUserStamp(cur);
+      const sNew = getUserStamp(u);
+      
+      // Mantém o que tem dados mais recentes
+      const best = sNew > sCur ? u : cur;
+      const worst = sNew > sCur ? cur : u;
+      
+      // Prefere o e-mail que tenha ponto (mais amigável), senão usa o do best
+      const bestEmail = best.email.includes('.') ? best.email : (worst.email.includes('.') ? worst.email : best.email);
+      const bestName = best.name || worst.name || vendName(bestEmail);
+      
+      map.set(key, {
+        ...worst,
+        ...best,
+        email: bestEmail,
+        name: bestName
+      });
+    }
+  });
+  return Array.from(map.values());
+}
+
 function mergeUsersVault(...lists){
   const map=new Map();
   const deletedSet=new Set((DB.deletedUsers||[]).map(e=>String(e).toLowerCase()));
@@ -685,13 +748,13 @@ async function loadAllDatabases(){
   }else{
     DB.usuarios=mergeUsersVault(embedded&&embedded.usuarios,locData&&locData.usuarios,idbData&&idbData.usuarios,locVaultUsers,idbVaultUsers);
   }
+  
+  // LIMPEZA ANTI-DUPLICIDADE
+  DB.usuarios = cleanDuplicateUsers(DB.usuarios);
 
   sources.forEach(s=>{
     if(s&&s.config){
       if(s.config.theme)DB.config.theme=s.config.theme;
-      // REMOVIDO: Não deixa o cache do celular sobrescrever a URL e a Chave que estão cravadas no código
-      // if(s.config.cloudUrl)DB.config.cloudUrl=s.config.cloudUrl;
-      // if(s.config.vaultKey)DB.config.vaultKey=s.config.vaultKey;
     }
   });
 }
@@ -722,6 +785,7 @@ async function pushToCloud(scope='all'){
       }
       if(Array.isArray(remoteUsers)){
         DB.usuarios=mergeUsersVault(remoteUsers,DB.usuarios);
+        DB.usuarios = cleanDuplicateUsers(DB.usuarios); // Limpa aqui também
         await saveUsersVault();
       }
       await fetchWithTimeout(uUrl,{
@@ -813,6 +877,7 @@ async function pullFromCloud(silent=true){
   if(Array.isArray(remoteUsers)&&remoteUsers.length){
     const beforeJSON=JSON.stringify(DB.usuarios);
     DB.usuarios=mergeUsersVault(DB.usuarios,remoteUsers);
+    DB.usuarios = cleanDuplicateUsers(DB.usuarios); // Limpa após merge
     if(JSON.stringify(DB.usuarios)!==beforeJSON)updated=true;
   }
   if(remoteSheets){
@@ -844,7 +909,6 @@ async function pullFromCloud(silent=true){
   return true;
 }
 
-// ===== WEBSOCKET EM TEMPO REAL =====
 let conexaoUsuarios = null;
 let conexaoPlanilhas = null;
 
@@ -867,6 +931,7 @@ function iniciarTempoReal(){
         if(dec && dec.usuarios){
           const before = JSON.stringify(DB.usuarios);
           DB.usuarios = mergeUsersVault(DB.usuarios, dec.usuarios);
+          DB.usuarios = cleanDuplicateUsers(DB.usuarios);
           if(JSON.stringify(DB.usuarios) !== before) {
             await saveLocalOnly();
             refreshActiveScreen();
@@ -903,9 +968,7 @@ function iniciarTempoReal(){
     } catch(err) { console.warn("Erro websocket sheets", err); }
   });
 }
-// ===================================
 
-// =============== LOG DE PRAZOS CRÍTICOS (POPUP + BANNER) ===============
 function getProcessosCriticos() {
     if(!currentUser) return { dbs: [], auts: [] };
     const hoje = todayISO();
@@ -988,9 +1051,7 @@ function renderDashAlerts() {
         banner.classList.add('hidden');
     }
 }
-// =======================================================================
 
-// =============== RELATÓRIO PDF DO DASHBOARD ===============
 window.exportDashboardPDF = async function() {
     const btn = document.getElementById('btnDashPDF');
     if(btn) { btn.innerHTML = 'Gerando PDF...'; btn.disabled = true; }
@@ -998,7 +1059,6 @@ window.exportDashboardPDF = async function() {
     const content = document.createElement('div');
     content.style.cssText = 'font-family:sans-serif;color:#000;padding:20px;background:#fff;width:800px;';
     
-    // Cabeçalho
     content.innerHTML = `
       <div style="text-align:center;margin-bottom:20px;border-bottom:2px solid #1e40af;padding-bottom:10px">
         <h2 style="margin:0;color:#1e40af;font-size:24px">Concept Be Safe</h2>
@@ -1006,34 +1066,22 @@ window.exportDashboardPDF = async function() {
       </div>
     `;
 
-    // Clona os KPIs visíveis
     const kpis = document.querySelector('.kpi-grid').cloneNode(true);
     kpis.querySelectorAll('.kpi-ico').forEach(el => el.remove());
     content.innerHTML += `<h3 style="color:#0f172a;border-bottom:1px solid #ccc;padding-bottom:5px;margin-top:20px">Indicadores</h3>`;
     content.innerHTML += kpis.outerHTML;
 
-    // Clona a tabela de Vendedores
     const tableWrap = document.querySelector('.dash-bottom-grid .card').cloneNode(true);
     content.innerHTML += `<h3 style="color:#0f172a;border-bottom:1px solid #ccc;padding-bottom:5px;margin-top:20px">Desempenho por Vendedor</h3>`;
     content.innerHTML += tableWrap.innerHTML;
 
-    // Configuração do PDF
-    const opt = {
-        margin:       10,
-        filename:     `Relatorio_Gerencial_${todayISO()}.pdf`,
-        image:        { type: 'jpeg', quality: 0.98 },
-        html2canvas:  { scale: 2, useCORS: true },
-        jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
-    };
+    const opt = { margin: 10, filename: `Relatorio_Gerencial_${todayISO()}.pdf`, image: { type: 'jpeg', quality: 0.98 }, html2canvas: { scale: 2, useCORS: true }, jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' } };
     
-    // Gera o PDF
     html2pdf().set(opt).from(content).save().then(() => {
         if(btn) { btn.innerHTML = '📄 Baixar Relatório Gerencial (PDF)'; btn.disabled = false; }
     });
 };
-// =======================================================
 
-// =============== FUNÇÕES DE EDIÇÃO E PDF DA OS ===============
 window.salvarNota = async function(os) {
     const notaInput = document.getElementById('notaOS');
     const nota = notaInput.value.trim();
@@ -1083,6 +1131,16 @@ window.openEditOS = function(os) {
 window.salvarEdicaoOS = async function(os) {
    const idx = DB.declaracoes.findIndex(x => String(x.os) === String(os));
    if(idx < 0) return;
+   const old = DB.declaracoes[idx];
+   const auditLog = [];
+   
+   if(old.cliente !== document.getElementById('editCli').value.trim()) auditLog.push(`Cliente: ${old.cliente} → ${document.getElementById('editCli').value.trim()}`);
+   if(old.veiculo !== document.getElementById('editVeic').value.trim()) auditLog.push(`Veículo: ${old.veiculo} → ${document.getElementById('editVeic').value.trim()}`);
+   if(old.blindagem !== document.getElementById('editBlind').value.trim()) auditLog.push(`Blindagem: ${old.blindagem} → ${document.getElementById('editBlind').value.trim()}`);
+   if(old.prazoEmissaoDB !== document.getElementById('editPrazo').value) auditLog.push(`Prazo: ${old.prazoEmissaoDB} → ${document.getElementById('editPrazo').value}`);
+   if(old.emissaoDB !== document.getElementById('editEmissao').value) auditLog.push(`Emissão: ${old.emissaoDB} → ${document.getElementById('editEmissao').value}`);
+   if(old.observacoes !== document.getElementById('editObs').value.trim()) auditLog.push(`Obs alteradas`);
+
    DB.declaracoes[idx].cliente = document.getElementById('editCli').value.trim();
    DB.declaracoes[idx].veiculo = document.getElementById('editVeic').value.trim();
    DB.declaracoes[idx].blindagem = document.getElementById('editBlind').value.trim();
@@ -1091,14 +1149,18 @@ window.salvarEdicaoOS = async function(os) {
    DB.declaracoes[idx].observacoes = document.getElementById('editObs').value.trim();
    DB.declaracoes[idx].lastModified = new Date().toISOString();
    DB.declaracoes[idx].modifiedBy = currentUser.name || currentUser.email;
+
+   if(auditLog.length > 0) {
+       if(!DB.declaracoes[idx].audit) DB.declaracoes[idx].audit = [];
+       DB.declaracoes[idx].audit.push({ date: new Date().toISOString(), user: currentUser.name || currentUser.email, action: auditLog.join(' | ') });
+   }
+
    await saveDB('all');
    closeModal();
    openDetail(DB.declaracoes[idx]);
    toast('OS atualizada com sucesso!');
 };
-// ===============================================================
 
-// =============== FUNÇÕES DE EDIÇÃO E PDF DA AUTORIZAÇÃO ===============
 window.gerarPDFExc = function(os) {
     const el = document.getElementById('modal-pdf-exc-content');
     if(!el) return;
@@ -1129,6 +1191,17 @@ window.openEditExc = function(os) {
 window.salvarEdicaoExc = async function(os) {
    const idx = DB.autorizacoes.findIndex(x => String(x.os) === String(os));
    if(idx < 0) return;
+   const old = DB.autorizacoes[idx];
+   const auditLog = [];
+
+   if(old.cliente !== document.getElementById('editExcCli').value.trim()) auditLog.push(`Cliente: ${old.cliente} → ${document.getElementById('editExcCli').value.trim()}`);
+   if(old.vendedor !== document.getElementById('editExcVend').value.trim()) auditLog.push(`Vendedor: ${old.vendedor} → ${document.getElementById('editExcVend').value.trim()}`);
+   if(old.modelo !== document.getElementById('editExcModelo').value.trim()) auditLog.push(`Modelo: ${old.modelo} → ${document.getElementById('editExcModelo').value.trim()}`);
+   if(old.exercito !== document.getElementById('editExcStatus').value.trim()) auditLog.push(`Status: ${old.exercito} → ${document.getElementById('editExcStatus').value.trim()}`);
+   if(old.prazoEmissao !== document.getElementById('editExcPrazo').value) auditLog.push(`Prazo: ${old.prazoEmissao} → ${document.getElementById('editExcPrazo').value}`);
+   if(old.dataEmissao !== document.getElementById('editExcEmissao').value) auditLog.push(`Emissão: ${old.dataEmissao} → ${document.getElementById('editExcEmissao').value}`);
+   if(old.observacao !== document.getElementById('editExcObs').value.trim()) auditLog.push(`Obs alteradas`);
+
    DB.autorizacoes[idx].cliente = document.getElementById('editExcCli').value.trim();
    DB.autorizacoes[idx].vendedor = document.getElementById('editExcVend').value.trim();
    DB.autorizacoes[idx].modelo = document.getElementById('editExcModelo').value.trim();
@@ -1138,12 +1211,93 @@ window.salvarEdicaoExc = async function(os) {
    DB.autorizacoes[idx].observacao = document.getElementById('editExcObs').value.trim();
    DB.autorizacoes[idx].lastModified = new Date().toISOString();
    DB.autorizacoes[idx].modifiedBy = currentUser.name || currentUser.email;
+
+   if(auditLog.length > 0) {
+       if(!DB.autorizacoes[idx].audit) DB.autorizacoes[idx].audit = [];
+       DB.autorizacoes[idx].audit.push({ date: new Date().toISOString(), user: currentUser.name || currentUser.email, action: auditLog.join(' | ') });
+   }
+
    await saveDB('all');
    closeModal();
    openExcDetail(DB.autorizacoes[idx]);
    toast('Autorização atualizada com sucesso!');
 };
-// =======================================================================
+
+window.toggleDbSelection = function(os, checked) {
+    if(checked) selectedDbs.add(String(os)); else selectedDbs.delete(String(os));
+    updateBulkBarDbs();
+};
+window.clearSelectionDbs = function() {
+    selectedDbs.clear();
+    renderTable();
+};
+function updateBulkBarDbs() {
+    const bar = document.getElementById('bulk-actions-dbs');
+    const countSpan = document.getElementById('bulk-count-dbs');
+    if(selectedDbs.size > 0) {
+        bar.classList.remove('hidden');
+        countSpan.textContent = selectedDbs.size;
+    } else {
+        bar.classList.add('hidden');
+    }
+}
+window.bulkUpdateDbs = async function(field) {
+    if(selectedDbs.size === 0) return;
+    if(!confirm(`Deseja marcar ${selectedDbs.size} OS como "${field === 'sicovabEnvio' ? 'Enviada ao Sicovab' : 'Emitida'}" com a data de hoje?`)) return;
+    
+    const today = todayISO();
+    DB.declaracoes.forEach(r => {
+        if(selectedDbs.has(String(r.os))) {
+            r[field] = today;
+            r.lastModified = new Date().toISOString();
+            r.modifiedBy = currentUser.name || currentUser.email;
+        }
+    });
+    
+    await saveDB('all');
+    toast(`${selectedDbs.size} OS atualizadas com sucesso!`);
+    selectedDbs.clear();
+    renderTable();
+    renderDashboard();
+};
+
+window.toggleExcSelection = function(os, checked) {
+    if(checked) selectedExc.add(String(os)); else selectedExc.delete(String(os));
+    updateBulkBarExc();
+};
+window.clearSelectionExc = function() {
+    selectedExc.clear();
+    renderExcTable();
+};
+function updateBulkBarExc() {
+    const bar = document.getElementById('bulk-actions-exc');
+    const countSpan = document.getElementById('bulk-count-exc');
+    if(selectedExc.size > 0) {
+        bar.classList.remove('hidden');
+        countSpan.textContent = selectedExc.size;
+    } else {
+        bar.classList.add('hidden');
+    }
+}
+window.bulkUpdateExc = async function(field) {
+    if(selectedExc.size === 0) return;
+    if(!confirm(`Deseja marcar ${selectedExc.size} Autorizações como "${field === 'envioSicovab' ? 'Enviada ao Sicovab' : 'Emitida'}" com a data de hoje?`)) return;
+    
+    const today = todayISO();
+    DB.autorizacoes.forEach(r => {
+        if(selectedExc.has(String(r.os))) {
+            r[field] = today;
+            r.lastModified = new Date().toISOString();
+            r.modifiedBy = currentUser.name || currentUser.email;
+        }
+    });
+    
+    await saveDB('all');
+    toast(`${selectedExc.size} Autorizações atualizadas com sucesso!`);
+    selectedExc.clear();
+    renderExcTable();
+    renderDashboard();
+};
 
 function refreshActiveScreen(){
   if(!currentUser)return;
@@ -1259,7 +1413,17 @@ function ensureVendedorUser(rawVend){
   if(!rawVend)return;
   const v=String(rawVend).trim();
   if(!v||v==='—'||v==='-')return;
-  if(DB.usuarios.some(u=>matchVendorIdentity(v,u)))return;
+  
+  // Verifica se já existe pelo nome normalizado ou prefixo do email
+  const normV = normIdentity(v);
+  const exists = DB.usuarios.some(u => {
+     const uNameNorm = normIdentity(u.name);
+     const uPrefixNorm = normIdentity(vendName(u.email));
+     return uNameNorm === normV || uPrefixNorm === normV;
+  });
+  
+  if(exists) return;
+
   const isEmail=v.includes('@');
   const email=isEmail?v.toLowerCase():(v.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]+/g,'.').replace(/^\.+|\.+$/g,'')+'@conceptbesafe.com.br');
   if((DB.deletedUsers||[]).includes(email))return;
@@ -1399,9 +1563,9 @@ function renderExcDateTags(){const container=$('#fExcDateTags');if(!excState.dat
 
 function parseAutorizacaoFile(rows){let hi=-1;for(let i=0;i<Math.min(rows.length,60);i++){const j=(rows[i]||[]).map(c=>String(c||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'')).join('|');if(j.includes('cliente')&&(j.includes('exercito')||j.includes('vendedor')||j.includes('os'))){hi=i;break}}if(hi<0)return[];const hdr=rows[hi].map(h=>String(h||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim());const idx=(names)=>{for(const n of names){const i=hdr.findIndex(h=>h.includes(n));if(i>=0)return i}return-1};const iOs=idx(['os'])>=0?idx(['os']):0;const iCliente=idx(['cliente']);const iColeta=idx(['coleta','data coleta']);const iVend=idx(['vendedor','gestor comercial']);const iExc=idx(['exercito']);const iPed=idx(['pedido compra','pedido','n pedido']);const iModelo=idx(['modelo','veiculo']);const iChassi=idx(['chassi','chassis']);const iSicovab=idx(['envio sicovab','sicovab']);const iPrazoEmi=idx(['prazo emissao']);const iPrazo9=idx(['prazo 09','prazo 9','9 dias']);const iPrev07=idx(['prev 07','dta prev 07','07 dias']);const iPrev09=idx(['prev 09','dta prev 09','09 dias']);const iObs=idx(['observacao','observacoes']);const iDataEmi=idx(['data emissao']);const iDias=idx(['qtd dias','dias']);const recs=[];for(let i=hi+1;i<rows.length;i++){const row=rows[i];if(!row||!row.length)continue;const os=String(row[iOs]||'').trim();if(!os||isNaN(parseInt(os)))continue;const cliente=iCliente>=0?String(row[iCliente]||''):'';const vendedor=iVend>=0?String(row[iVend]||''):'';if(!cliente&&!vendedor)continue;const rowText=JSON.stringify(row);if(rowText.includes('Threaded comment')||rowText.includes('tc={'))continue;recs.push({os,cliente,dataColeta:parseDate(iColeta>=0?row[iColeta]:null),vendedor:vendedor.trim(),exercito:iExc>=0?String(row[iExc]||''):'',pedidoCompra:iPed>=0?String(row[iPed]||''):'',modelo:iModelo>=0?String(row[iModelo]||''):'',chassi:iChassi>=0?String(row[iChassi]||''):'',envioSicovab:parseDate(iSicovab>=0?row[iSicovab]:null),prazoEmissao:parseDate(iPrazoEmi>=0?row[iPrazoEmi]:null),prazo9dias:parseDate(iPrazo9>=0?row[iPrazo9]:null),dtaPrev07:parseDate(iPrev07>=0?row[iPrev07]:null),dtaPrev09:parseDate(iPrev09>=0?row[iPrev09]:null),observacao:iObs>=0?String(row[iObs]||''):'',dataEmissao:parseDate(iDataEmi>=0?row[iDataEmi]:null),dias:iDias>=0&&row[iDias]!=null&&row[iDias]!==''&&!isNaN(Number(row[iDias]))?Number(row[iDias]):null,lastModified:new Date().toISOString(),modifiedBy:'import'})}return recs}
 function handleFileDbs(file){if(!file)return;pendingFileNameDbs=file.name;const reader=new FileReader();reader.onload=e=>{try{const wb=XLSX.read(new Uint8Array(e.target.result),{type:'array',cellDates:true});const ws=wb.Sheets[wb.SheetNames[0]];const rows=XLSX.utils.sheet_to_json(ws,{header:1,defval:'',raw:true});let hi=-1;for(let i=0;i<Math.min(rows.length,40);i++){const j=(rows[i]||[]).map(c=>String(c).toLowerCase()).join('|');if((j.includes('veículo')||j.includes('veiculo'))&&j.includes('cliente')&&j.includes('vendedor')){hi=i;break}}if(hi<0){toast('Cabeçalho não encontrado.','err');return}const recs=[];for(let i=hi+1;i<rows.length;i++){const row=rows[i];if(!row||!row.length)continue;const os=String(row[0]||'').trim();if(!os||os==='Dashboard'||os==='---')continue;recs.push({os,veiculo:String(row[1]||''),blindagem:String(row[3]||''),cliente:String(row[9]||''),vendedor:String(row[10]||'').trim(),autorizacao:parseDate(row[4]),solicitacaoTermo:parseDate(row[12]),prazoTermo:parseDate(row[13]),emissaoTermo:parseDate(row[14]),engenhariaAss:parseDate(row[15]),procAss:parseDate(row[16]),diaAss:String(row[17]||''),sicovabEnvio:parseDate(row[18]),prazoEmissaoDB:parseDate(row[19]),emissaoDB:parseDate(row[20]),dias:row[21]!=null&&row[21]!==''?Number(row[21]):null,observacoes:String(row[22]||''),lastModified:new Date().toISOString(),modifiedBy:'import'})}if(!recs.length){toast('Nenhum registro.','err');return}pendingDbs=recs;$('#importPanelDbs').classList.remove('hidden');$('#dropZoneDbs').classList.add('hidden');$('#pvCountDbs').textContent=recs.length+' registros lidos'}catch(err){console.error(err);toast('Erro ao ler.','err')}};reader.readAsArrayBuffer(file)}
-async function doImportDbs(){if(!pendingDbs)return;const count=pendingDbs.length;createBackup('import-dbs');if(importModeDbs==='replace'){DB.declaracoes=pendingDbs}else if(importModeDbs==='merge'){const m=new Map(DB.declaracoes.map(r=>[String(r.os),r]));pendingDbs.forEach(r=>{const k=String(r.os);const existing=m.get(k);if(existing){const manualNotes=existing.manualNotes||'';const history=existing.history||[];m.set(k,{...existing,...r,manualNotes,history,lastModified:new Date().toISOString(),modifiedBy:'import'})}else{m.set(k,{...r,manualNotes:'',history:[],lastModified:new Date().toISOString(),modifiedBy:'import'})}});DB.declaracoes=Array.from(m.values())}else{const ex=new Set(DB.declaracoes.map(r=>String(r.os)));pendingDbs.forEach(r=>{if(!ex.has(String(r.os)))DB.declaracoes.push({...r,manualNotes:'',history:[],lastModified:new Date().toISOString(),modifiedBy:'import'})})}const vends=[...new Set(DB.declaracoes.map(r=>r.vendedor).filter(Boolean))];vends.forEach(ensureVendedorUser);DB.lastUpdate.dbs=new Date().toISOString();DB.lastFiles.dbs={name:pendingFileNameDbs||'Sicovab_DBs.xlsx',count:DB.declaracoes.length};pendingDbs=null;pendingFileNameDbs='';$('#importPanelDbs').classList.add('hidden');$('#dropZoneDbs').classList.remove('hidden');$('#fileInputDbs').value='';await saveDB('all');populateYearSelects();updateBarRender();renderDashboard();toast(count+' D.Bs importados e sincronizados!')}
+async function doImportDbs(){if(!pendingDbs)return;const count=pendingDbs.length;createBackup('import-dbs');if(importModeDbs==='replace'){DB.declaracoes=pendingDbs}else if(importModeDbs==='merge'){const m=new Map(DB.declaracoes.map(r=>[String(r.os),r]));pendingDbs.forEach(r=>{const k=String(r.os);const existing=m.get(k);if(existing){const manualNotes=existing.manualNotes||'';const history=existing.history||[];const audit=existing.audit||[];m.set(k,{...existing,...r,manualNotes,history,audit,lastModified:new Date().toISOString(),modifiedBy:'import'})}else{m.set(k,{...r,manualNotes:'',history:[],audit:[],lastModified:new Date().toISOString(),modifiedBy:'import'})}});DB.declaracoes=Array.from(m.values())}else{const ex=new Set(DB.declaracoes.map(r=>String(r.os)));pendingDbs.forEach(r=>{if(!ex.has(String(r.os)))DB.declaracoes.push({...r,manualNotes:'',history:[],audit:[],lastModified:new Date().toISOString(),modifiedBy:'import'})})}const vends=[...new Set(DB.declaracoes.map(r=>r.vendedor).filter(Boolean))];vends.forEach(ensureVendedorUser);DB.lastUpdate.dbs=new Date().toISOString();DB.lastFiles.dbs={name:pendingFileNameDbs||'Sicovab_DBs.xlsx',count:DB.declaracoes.length};pendingDbs=null;pendingFileNameDbs='';$('#importPanelDbs').classList.add('hidden');$('#dropZoneDbs').classList.remove('hidden');$('#fileInputDbs').value='';await saveDB('all');populateYearSelects();updateBarRender();renderDashboard();toast(count+' D.Bs importados e sincronizados!')}
 function handleFileAut(file){if(!file)return;pendingFileNameAut=file.name;const reader=new FileReader();reader.onload=e=>{try{const wb=XLSX.read(new Uint8Array(e.target.result),{type:'array',cellDates:true});const ws=wb.Sheets[wb.SheetNames[0]];const rows=XLSX.utils.sheet_to_json(ws,{header:1,defval:'',raw:true});const recs=parseAutorizacaoFile(rows);if(!recs.length){toast('Nenhum registro válido.','err');return}pendingAut=recs;$('#importPanelAut').classList.remove('hidden');$('#dropZoneAut').classList.add('hidden');$('#pvCountAut').textContent=recs.length+' autorizações pendentes lidas'}catch(err){console.error(err);toast('Erro ao ler.','err')}};reader.readAsArrayBuffer(file)}
-async function doImportAut(){if(!pendingAut)return;const count=pendingAut.length;createBackup('import-aut');if(importModeAut==='replace'){DB.autorizacoes=pendingAut}else if(importModeAut==='merge'){const m=new Map(DB.autorizacoes.map(r=>[String(r.os),r]));pendingAut.forEach(r=>{const k=String(r.os);const existing=m.get(k);if(existing){const manualNotes=existing.manualNotes||'';const history=existing.history||[];m.set(k,{...existing,...r,manualNotes,history,lastModified:new Date().toISOString(),modifiedBy:'import'})}else{m.set(k,{...r,manualNotes:'',history:[],lastModified:new Date().toISOString(),modifiedBy:'import'})}});DB.autorizacoes=Array.from(m.values())}else{const ex=new Set(DB.autorizacoes.map(r=>String(r.os)));pendingAut.forEach(r=>{if(!ex.has(String(r.os)))DB.autorizacoes.push({...r,manualNotes:'',history:[],lastModified:new Date().toISOString(),modifiedBy:'import'})})}const vends=[...new Set(DB.autorizacoes.map(r=>r.vendedor).filter(Boolean))];vends.forEach(ensureVendedorUser);DB.lastUpdate.aut=new Date().toISOString();DB.lastFiles.aut={name:pendingFileNameAut||'Autorizacoes.xlsx',count:DB.autorizacoes.length};pendingAut=null;pendingFileNameAut='';$('#importPanelAut').classList.add('hidden');$('#dropZoneAut').classList.remove('hidden');$('#fileInputAut').value='';await saveDB('all');populateYearSelects();updateBarRender();toast(count+' autorizações pendentes importadas e sincronizadas!')}
+async function doImportAut(){if(!pendingAut)return;const count=pendingAut.length;createBackup('import-aut');if(importModeAut==='replace'){DB.autorizacoes=pendingAut}else if(importModeAut==='merge'){const m=new Map(DB.autorizacoes.map(r=>[String(r.os),r]));pendingAut.forEach(r=>{const k=String(r.os);const existing=m.get(k);if(existing){const manualNotes=existing.manualNotes||'';const history=existing.history||[];const audit=existing.audit||[];m.set(k,{...existing,...r,manualNotes,history,audit,lastModified:new Date().toISOString(),modifiedBy:'import'})}else{m.set(k,{...r,manualNotes:'',history:[],audit:[],lastModified:new Date().toISOString(),modifiedBy:'import'})}});DB.autorizacoes=Array.from(m.values())}else{const ex=new Set(DB.autorizacoes.map(r=>String(r.os)));pendingAut.forEach(r=>{if(!ex.has(String(r.os)))DB.autorizacoes.push({...r,manualNotes:'',history:[],audit:[],lastModified:new Date().toISOString(),modifiedBy:'import'})})}const vends=[...new Set(DB.autorizacoes.map(r=>r.vendedor).filter(Boolean))];vends.forEach(ensureVendedorUser);DB.lastUpdate.aut=new Date().toISOString();DB.lastFiles.aut={name:pendingFileNameAut||'Autorizacoes.xlsx',count:DB.autorizacoes.length};pendingAut=null;pendingFileNameAut='';$('#importPanelAut').classList.add('hidden');$('#dropZoneAut').classList.remove('hidden');$('#fileInputAut').value='';await saveDB('all');populateYearSelects();updateBarRender();toast(count+' autorizações pendentes importadas e sincronizadas!')}
 
 function exportExcel(){const recs=getFiltered();if(!recs.length){toast('Nada para exportar.','err');return}const data=recs.map(r=>({'OS':r.os,'Veículo':r.veiculo,'Blindagem':r.blindagem,'Cliente':r.cliente,'Vendedor':r.vendedor,'Autorização':fmtDate(r.autorizacao),'Emi. Termo':fmtDate(r.emissaoTermo),'Eng. Ass.':fmtDate(r.engenhariaAss),'Proc. Ass.':fmtDate(r.procAss),'Dia Ass.':r.diaAss,'Sicovab':fmtDate(r.sicovabEnvio),'Prazo D.B':fmtDate(r.prazoEmissaoDB),'Emissão D.B':fmtDate(r.emissaoDB),'Dias':r.dias,'Status':recStatus(r)==='emitido'?'Emitida':recStatus(r)==='atrasado'?'Atrasada':'Pendente','Obs':r.observacoes}));const ws=XLSX.utils.json_to_sheet(data);const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,'Declarações');XLSX.writeFile(wb,'sicovab_dbs_'+todayISO()+'.xlsx');toast('Exportado.')}
 function exportExc(){const recs=visibleExc();if(!recs.length){toast('Nada para exportar.','err');return}const data=recs.map(r=>({'OS':r.os,'Cliente':r.cliente,'Vendedor':r.vendedor,'Modelo':r.modelo,'Status Exército':r.exercito,'Envio Sicovab':fmtDate(r.envioSicovab),'Prazo Emissão':fmtDate(r.prazoEmissao),'Data Emissão':fmtDate(r.dataEmissao),'Dias':r.dias,'Observação':r.observacao}));const ws=XLSX.utils.json_to_sheet(data);const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,'Autorizações');XLSX.writeFile(wb,'autorizacoes_exercito_'+todayISO()+'.xlsx');toast('Exportado.')}
@@ -1466,6 +1630,13 @@ function openDetail(r){
     </div>
   `).join('') || '<div style="color:var(--muted);font-size:11px;padding:10px">Nenhuma anotação.</div>';
 
+  const auditHtml = (r.audit || []).map(a => `
+    <div class="history-item">
+      <span class="history-date">${fmtDateTime(a.date)} • <b>${esc(a.user)}</b></span>
+      <span>${esc(a.action)}</span>
+    </div>
+  `).join('') || '<div style="color:var(--muted);font-size:11px;padding:10px">Nenhuma alteração registrada.</div>';
+
   openModal(`
     <div class="modal-head">
       <h3 class="mono" style="font-size:14px">OS ${esc(r.os||'—')}</h3>
@@ -1489,13 +1660,18 @@ function openDetail(r){
       
       ${r.observacoes?'<div style="margin-top:12px;padding:10px;background:var(--surface2);border-radius:8px;font-size:11px;border:1px solid var(--border)"><b>Obs:</b> '+esc(r.observacoes)+'</div>':''}
       
-      <div style="margin-top:20px; border-top: 1px dashed var(--border); padding-top:15px">
-        <h4 style="font-size:12px; margin-bottom:8px; color:var(--primary)">📝 Histórico de Anotações</h4>
-        <div class="history-list">${historyHtml}</div>
-        
-        <div style="display:flex; gap:8px; margin-top:12px" class="no-print">
-          <input type="text" id="notaOS" placeholder="Adicionar uma anotação a esta OS..." style="flex:1; font-size:12px; padding:8px">
-          <button class="btn btn-primary btn-sm" onclick="salvarNota('${esc(r.os)}')">Salvar</button>
+      <div style="display:flex; gap:15px; margin-top:20px; border-top: 1px dashed var(--border); padding-top:15px; flex-wrap:wrap;">
+        <div style="flex:1; min-width:250px;">
+            <h4 style="font-size:12px; margin-bottom:8px; color:var(--primary)">📝 Histórico de Anotações</h4>
+            <div class="history-list">${historyHtml}</div>
+            <div style="display:flex; gap:8px; margin-top:12px" class="no-print">
+              <input type="text" id="notaOS" placeholder="Adicionar anotação..." style="flex:1; font-size:12px; padding:8px">
+              <button class="btn btn-primary btn-sm" onclick="salvarNota('${esc(r.os)}')">Salvar</button>
+            </div>
+        </div>
+        <div style="flex:1; min-width:250px;">
+            <h4 style="font-size:12px; margin-bottom:8px; color:var(--red)">🕵️ Auditoria (Alterações)</h4>
+            <div class="history-list">${auditHtml}</div>
         </div>
       </div>
     </div>
@@ -1505,6 +1681,13 @@ function openDetail(r){
 function openExcDetail(r){
   const cell=(k,v,m)=>'<div class="detail-cell"><div class="k">'+k+'</div><div class="v '+(m?'mono ':'')+' '+(v?'':'empty-v')+'">'+(v||'não informado')+'</div></div>';
   
+  const auditHtml = (r.audit || []).map(a => `
+    <div class="history-item">
+      <span class="history-date">${fmtDateTime(a.date)} • <b>${esc(a.user)}</b></span>
+      <span>${esc(a.action)}</span>
+    </div>
+  `).join('') || '<div style="color:var(--muted);font-size:11px;padding:10px">Nenhuma alteração registrada.</div>';
+
   openModal(`
     <div class="modal-head">
       <h3 class="mono" style="font-size:14px">OS ${esc(r.os||'—')} — Autorização</h3>
@@ -1524,6 +1707,11 @@ function openExcDetail(r){
         ${cell('Dias',r.dias!=null&&r.dias!==''?String(r.dias):'',1)}${cell('Pedido Compra',esc(r.pedidoCompra))}
       </div>
       ${r.observacao?'<div style="margin-top:12px;padding:10px;background:var(--surface2);border-radius:8px;font-size:11px;border:1px solid var(--border)"><b>Obs:</b> '+esc(r.observacao)+'</div>':''}
+      
+      <div style="margin-top:20px; border-top: 1px dashed var(--border); padding-top:15px;">
+        <h4 style="font-size:12px; margin-bottom:8px; color:var(--red)">🕵️ Auditoria (Alterações)</h4>
+        <div class="history-list">${auditHtml}</div>
+      </div>
     </div>
   `,true)
 }
@@ -1586,6 +1774,7 @@ function openUserForm(existing,idx){
       }
       DB.usuarios[idx]=u;
     }
+    DB.usuarios = cleanDuplicateUsers(DB.usuarios); // Limpa após salvar
     await saveDB('users');
     closeModal();
     renderUsers();
@@ -1618,11 +1807,33 @@ function visibleExc(){
 
 function fillFilters(){populateYearSelects();const recs=visibleRecords();const uq=a=>[...new Set(a.filter(Boolean))].sort();const vs=$('#fVend'),cs=$('#fCliente'),bs=$('#fBlind');const cv=tableState.vend,cc=tableState.cli,cb=tableState.blind;vs.innerHTML='<option value="">Vendedor: todos</option>'+uq(recs.map(r=>r.vendedor)).map(v=>'<option value="'+esc(v)+'">'+esc(vendName(v))+'</option>').join('');cs.innerHTML='<option value="">Cliente: todos</option>'+uq(recs.map(r=>r.cliente)).map(v=>'<option value="'+esc(v)+'">'+esc(v.length>35?v.slice(0,35)+'…':v)+'</option>').join('');bs.innerHTML='<option value="">Blindagem: todas</option>'+uq(recs.map(r=>r.blindagem)).map(v=>'<option value="'+esc(v)+'">'+esc(v)+'</option>').join('');vs.value=cv;cs.value=cc;bs.value=cb}
 function getFiltered(){let recs=visibleRecords();const q=tableState.search.toLowerCase().trim();if(q)recs=recs.filter(r=>Object.values(r).map(v=>String(v==null?'':v)).join(' ').toLowerCase().includes(q)||vendName(r.vendedor).includes(q));if(tableState.vend)recs=recs.filter(r=>r.vendedor===tableState.vend);if(tableState.cli)recs=recs.filter(r=>r.cliente===tableState.cli);if(tableState.blind)recs=recs.filter(r=>r.blindagem===tableState.blind);if(tableState.status)recs=recs.filter(r=>recStatus(r)===tableState.status);if(tableState.dateField||tableState.date||tableState.month||tableState.year||tableState.from||tableState.to){recs=recs.filter(r=>matchTemporal(getDbsDates(r,tableState.dateField),tableState))}const k=tableState.sortKey,d=tableState.sortDir==='asc'?1:-1;return[...recs].sort((a,b)=>{let va,vb;if(k==='dias'){va=Number(a[k])||0;vb=Number(b[k])||0;return(va-vb)*d}va=String(a[k]||'').toLowerCase();vb=String(b[k]||'').toLowerCase();return va<vb?-d:va>vb?d:0})}
-const COLS=[{key:'os',label:'OS'},{key:'cliente',label:'Cliente'},{key:'veiculo',label:'Veículo'},{key:'blindagem',label:'Blindagem'},{key:'vendedor',label:'Vendedor'},{key:'autorizacao',label:'Autorização'},{key:'emissaoTermo',label:'Emi. Termo'},{key:'engenhariaAss',label:'Eng. Ass.'},{key:'procAss',label:'Proc. Ass.'},{key:'diaAss',label:'Dia'},{key:'sicovabEnvio',label:'Sicovab'},{key:'prazoEmissaoDB',label:'Prazo D.B'},{key:'emissaoDB',label:'Emissão D.B'},{key:'dias',label:'Dias'},{key:'_status',label:'Status'}];
-function renderTable(){fillFilters();$('#theadRow').innerHTML=COLS.map(c=>{const arr=tableState.sortKey===c.key?(tableState.sortDir==='asc'?'▲':'▼'):'';return'<th data-k="'+c.key+'">'+c.label+' <span style="opacity:.5;font-size:8px">'+arr+'</span></th>'}).join('');$$('#theadRow th').forEach(th=>th.onclick=()=>{const k=th.dataset.k;if(tableState.sortKey===k)tableState.sortDir=tableState.sortDir==='asc'?'desc':'asc';else{tableState.sortKey=k;tableState.sortDir='asc'}tableState.page=1;renderTable()});const all=getFiltered();$('#recCount').textContent=all.length+' registro'+(all.length===1?'':'s')+(currentUser.role==='vendedor'?' (seus)':currentUser.role==='gerente'?' (sua equipe)':'');const pp=tableState.perPage,total=all.length,pages=Math.max(1,Math.ceil(total/pp));if(tableState.page>pages)tableState.page=pages;const start=(tableState.page-1)*pp,rows=all.slice(start,start+pp),tb=$('#tbodyRec');if(!rows.length){tb.innerHTML='<tr><td colspan="'+COLS.length+'" style="text-align:center;padding:40px;color:var(--muted)">Nenhum registro encontrado</td></tr>'}else{tb.innerHTML=rows.map(r=>{const st=recStatus(r);const lbl=st==='emitido'?'Emitida':st==='atrasado'?'Atrasada':'Pendente';return'<tr data-id="'+esc(r._id||r.os)+'"><td class="os">'+esc(r.os||'—')+'</td><td style="max-width:160px;overflow:hidden;text-overflow:ellipsis">'+esc(r.cliente||'—')+'</td><td>'+esc(r.veiculo||'—')+'</td><td style="max-width:140px;overflow:hidden;text-overflow:ellipsis">'+esc(r.blindagem||'—')+'</td><td><span class="vend-pill"><span class="vend-dot" style="background:'+vendColor(r.vendedor)+'">'+esc((vendName(r.vendedor)||'?')[0].toUpperCase())+'</span>'+esc(vendName(r.vendedor)||'—')+'</span></td><td class="mono" style="font-size:10px">'+fmtDate(r.autorizacao)+'</td><td class="mono" style="font-size:10px">'+fmtDate(r.emissaoTermo)+'</td><td class="mono" style="font-size:10px">'+fmtDate(r.engenhariaAss)+'</td><td class="mono" style="font-size:10px">'+fmtDate(r.procAss)+'</td><td style="font-size:9px">'+esc(r.diaAss||'—')+'</td><td class="mono" style="font-size:10px">'+fmtDate(r.sicovabEnvio)+'</td><td class="mono" style="font-size:10px">'+fmtDate(r.prazoEmissaoDB)+'</td><td class="mono" style="font-size:10px;font-weight:600">'+fmtDate(r.emissaoDB)+'</td><td class="mono" style="text-align:center">'+(r.dias!=null&&r.dias!==''?r.dias:'—')+'</td><td><span class="badge '+st+'"><span class="dot"></span>'+lbl+'</span></td></tr>'}).join('');tb.querySelectorAll('tr').forEach(tr=>{const rec=DB.declaracoes.find(r=>(r._id||r.os)===tr.dataset.id);if(rec)tr.onclick=()=>openDetail(rec)})}$('#pgInfo').innerHTML='<b>'+(total?start+1:0)+'–'+Math.min(start+pp,total)+'</b> de <b>'+total+'</b>';let btns='';const maxB=5;let s=Math.max(1,tableState.page-2),en=Math.min(pages,s+maxB-1);s=Math.max(1,en-maxB+1);for(let p=s;p<=en;p++)btns+='<button class="pg-btn '+(p===tableState.page?'active':'')+'" onclick="tableState.page='+p+';renderTable()">'+p+'</button>';$('#pgBtns').innerHTML=btns}
+const COLS=[{key:'_check',label:''},{key:'os',label:'OS'},{key:'cliente',label:'Cliente'},{key:'veiculo',label:'Veículo'},{key:'blindagem',label:'Blindagem'},{key:'vendedor',label:'Vendedor'},{key:'autorizacao',label:'Autorização'},{key:'emissaoTermo',label:'Emi. Termo'},{key:'engenhariaAss',label:'Eng. Ass.'},{key:'procAss',label:'Proc. Ass.'},{key:'diaAss',label:'Dia'},{key:'sicovabEnvio',label:'Sicovab'},{key:'prazoEmissaoDB',label:'Prazo D.B'},{key:'emissaoDB',label:'Emissão D.B'},{key:'dias',label:'Dias'},{key:'_status',label:'Status'}];
+function renderTable(){fillFilters();$('#theadRow').innerHTML=COLS.map(c=>{if(c.key==='_check')return'<th style="width:30px;"><input type="checkbox" onchange="toggleAllDbs(this.checked)"></th>';const arr=tableState.sortKey===c.key?(tableState.sortDir==='asc'?'▲':'▼'):'';return'<th data-k="'+c.key+'">'+c.label+' <span style="opacity:.5;font-size:8px">'+arr+'</span></th>'}).join('');$$('#theadRow th').forEach(th=>th.onclick=()=>{const k=th.dataset.k;if(!k||k==='_check')return;if(tableState.sortKey===k)tableState.sortDir=tableState.sortDir==='asc'?'desc':'asc';else{tableState.sortKey=k;tableState.sortDir='asc'}tableState.page=1;renderTable()});const all=getFiltered();$('#recCount').textContent=all.length+' registro'+(all.length===1?'':'s')+(currentUser.role==='vendedor'?' (seus)':currentUser.role==='gerente'?' (sua equipe)':'');const pp=tableState.perPage,total=all.length,pages=Math.max(1,Math.ceil(total/pp));if(tableState.page>pages)tableState.page=pages;const start=(tableState.page-1)*pp,rows=all.slice(start,start+pp),tb=$('#tbodyRec');if(!rows.length){tb.innerHTML='<tr><td colspan="'+COLS.length+'" style="text-align:center;padding:40px;color:var(--muted)">Nenhum registro encontrado</td></tr>'}else{tb.innerHTML=rows.map(r=>{const st=recStatus(r);const lbl=st==='emitido'?'Emitida':st==='atrasado'?'Atrasada':'Pendente';const isChecked=selectedDbs.has(String(r.os))?'checked':'';return'<tr data-id="'+esc(r._id||r.os)+'"><td onclick="event.stopPropagation()" style="text-align:center"><input type="checkbox" onchange="toggleDbSelection(\''+esc(r.os)+'\', this.checked)" '+isChecked+'></td><td class="os">'+esc(r.os||'—')+'</td><td style="max-width:160px;overflow:hidden;text-overflow:ellipsis">'+esc(r.cliente||'—')+'</td><td>'+esc(r.veiculo||'—')+'</td><td style="max-width:140px;overflow:hidden;text-overflow:ellipsis">'+esc(r.blindagem||'—')+'</td><td><span class="vend-pill"><span class="vend-dot" style="background:'+vendColor(r.vendedor)+'">'+esc((vendName(r.vendedor)||'?')[0].toUpperCase())+'</span>'+esc(vendName(r.vendedor)||'—')+'</span></td><td class="mono" style="font-size:10px">'+fmtDate(r.autorizacao)+'</td><td class="mono" style="font-size:10px">'+fmtDate(r.emissaoTermo)+'</td><td class="mono" style="font-size:10px">'+fmtDate(r.engenhariaAss)+'</td><td class="mono" style="font-size:10px">'+fmtDate(r.procAss)+'</td><td style="font-size:9px">'+esc(r.diaAss||'—')+'</td><td class="mono" style="font-size:10px">'+fmtDate(r.sicovabEnvio)+'</td><td class="mono" style="font-size:10px">'+fmtDate(r.prazoEmissaoDB)+'</td><td class="mono" style="font-size:10px;font-weight:600">'+fmtDate(r.emissaoDB)+'</td><td class="mono" style="text-align:center">'+(r.dias!=null&&r.dias!==''?r.dias:'—')+'</td><td><span class="badge '+st+'"><span class="dot"></span>'+lbl+'</span></td></tr>'}).join('');tb.querySelectorAll('tr').forEach(tr=>{const rec=DB.declaracoes.find(r=>(r._id||r.os)===tr.dataset.id);if(rec)tr.onclick=()=>openDetail(rec)})}updateBulkBarDbs();$('#pgInfo').innerHTML='<b>'+(total?start+1:0)+'–'+Math.min(start+pp,total)+'</b> de <b>'+total+'</b>';let btns='';const maxB=5;let s=Math.max(1,tableState.page-2),en=Math.min(pages,s+maxB-1);s=Math.max(1,en-maxB+1);for(let p=s;p<=en;p++)btns+='<button class="pg-btn '+(p===tableState.page?'active':'')+'" onclick="tableState.page='+p+';renderTable()">'+p+'</button>';$('#pgBtns').innerHTML=btns}
+window.toggleAllDbs = function(checked) {
+    const all = getFiltered();
+    const start = (tableState.page - 1) * tableState.perPage;
+    const rows = all.slice(start, start + tableState.perPage);
+    rows.forEach(r => {
+        if(checked) selectedDbs.add(String(r.os));
+        else selectedDbs.delete(String(r.os));
+    });
+    renderTable();
+};
 
-const EXC_COLS=[{key:'os',label:'OS'},{key:'cliente',label:'Cliente'},{key:'vendedor',label:'Vendedor'},{key:'modelo',label:'Modelo'},{key:'exercito',label:'Status Exército'},{key:'envioSicovab',label:'Envio Sicovab'},{key:'prazoEmissao',label:'Prazo Emissão'},{key:'dataEmissao',label:'Data Emissão'},{key:'dias',label:'Dias'},{key:'observacao',label:'Observação'}];
-function renderExcTable(){populateYearSelects();const recs=visibleExc();const uq=a=>[...new Set(a.filter(Boolean))].sort();const vs=$('#fExcVend'),ss=$('#fExcStatus');const cv=excState.vend,cs=excState.status;vs.innerHTML='<option value="">Vendedor: todos</option>'+uq(recs.map(r=>r.vendedor)).map(v=>'<option value="'+esc(v)+'">'+esc(vendName(v))+'</option>').join('');ss.innerHTML='<option value="">Status Exército: todos</option>'+uq(recs.map(r=>r.exercito)).map(v=>'<option value="'+esc(v)+'">'+esc(v.length>40?v.slice(0,40)+'…':v)+'</option>').join('');vs.value=cv;ss.value=cs;$('#excHeadRow').innerHTML=EXC_COLS.map(c=>'<th>'+c.label+'</th>').join('');let filtered=recs;const q=excState.search.toLowerCase().trim();if(q)filtered=filtered.filter(r=>Object.values(r).map(v=>String(v==null?'':v)).join(' ').toLowerCase().includes(q));if(excState.vend)filtered=filtered.filter(r=>r.vendedor===excState.vend);if(excState.status)filtered=filtered.filter(r=>r.exercito===excState.status);if(excState.dates&&excState.dates.length>0){filtered=filtered.filter(r=>{const recDates=[r.envioSicovab,r.prazoEmissao,r.dataEmissao,r.dataColeta,r.prazo9dias,r.dtaPrev07,r.dtaPrev09].filter(Boolean);return recDates.some(d=>excState.dates.includes(d))})}if(excState.dateField||excState.date||excState.month||excState.year||excState.from||excState.to){filtered=filtered.filter(r=>matchTemporal(getExcDates(r,excState.dateField),excState))}$('#excCount').textContent=filtered.length+' processo'+(filtered.length===1?'':'s')+(currentUser.role==='vendedor'?' (seus)':currentUser.role==='gerente'?' (sua equipe)':'');const pp=excState.perPage,total=filtered.length,pages=Math.max(1,Math.ceil(total/pp));if(excState.page>pages)excState.page=pages;const start=(excState.page-1)*pp,rows=filtered.slice(start,start+pp),tb=$('#excBody');if(!rows.length){tb.innerHTML='<tr><td colspan="'+EXC_COLS.length+'" style="text-align:center;padding:40px;color:var(--muted)">Nenhum processo encontrado</td></tr>'}else{tb.innerHTML=rows.map(r=>'<tr data-id="'+esc(r._id||r.os)+'"><td class="os">'+esc(r.os||'—')+'</td><td style="max-width:180px;overflow:hidden;text-overflow:ellipsis">'+esc(r.cliente||'—')+'</td><td><span class="vend-pill"><span class="vend-dot" style="background:'+vendColor(r.vendedor)+'">'+esc((vendName(r.vendedor)||'?')[0].toUpperCase())+'</span>'+esc(vendName(r.vendedor)||'—')+'</span></td><td>'+esc(r.modelo||'—')+'</td><td style="max-width:220px;overflow:hidden;text-overflow:ellipsis;font-size:10px"><span class="badge autpendente"><span class="dot"></span>'+esc(r.exercito||'—')+'</span></td><td class="mono" style="font-size:10px">'+fmtDate(r.envioSicovab)+'</td><td class="mono" style="font-size:10px">'+fmtDate(r.prazoEmissao)+'</td><td class="mono" style="font-size:10px;font-weight:600">'+fmtDate(r.dataEmissao)+'</td><td class="mono" style="text-align:center">'+(r.dias!=null&&r.dias!==''?r.dias:'—')+'</td><td style="max-width:200px;overflow:hidden;text-overflow:ellipsis;font-size:10px">'+esc(r.observacao||'—')+'</td></tr>').join('');tb.querySelectorAll('tr').forEach(tr=>{const rec=(DB.autorizacoes||[]).find(r=>String(r._id||r.os)===String(tr.dataset.id));if(rec)tr.onclick=()=>openExcDetail(rec)})}$('#excPgInfo').innerHTML='<b>'+(total?start+1:0)+'–'+Math.min(start+pp,total)+'</b> de <b>'+total+'</b>';let btns='';const maxB=5;let s=Math.max(1,excState.page-2),en=Math.min(pages,s+maxB-1);s=Math.max(1,en-maxB+1);for(let p=s;p<=en;p++)btns+='<button class="pg-btn '+(p===excState.page?'active':'')+'" onclick="excState.page='+p+';renderExcTable()">'+p+'</button>';$('#excPgBtns').innerHTML=btns}
+const EXC_COLS=[{key:'_check',label:''},{key:'os',label:'OS'},{key:'cliente',label:'Cliente'},{key:'vendedor',label:'Vendedor'},{key:'modelo',label:'Modelo'},{key:'exercito',label:'Status Exército'},{key:'envioSicovab',label:'Envio Sicovab'},{key:'prazoEmissao',label:'Prazo Emissão'},{key:'dataEmissao',label:'Data Emissão'},{key:'dias',label:'Dias'},{key:'observacao',label:'Observação'}];
+function renderExcTable(){populateYearSelects();const recs=visibleExc();const uq=a=>[...new Set(a.filter(Boolean))].sort();const vs=$('#fExcVend'),ss=$('#fExcStatus');const cv=excState.vend,cs=excState.status;vs.innerHTML='<option value="">Vendedor: todos</option>'+uq(recs.map(r=>r.vendedor)).map(v=>'<option value="'+esc(v)+'">'+esc(vendName(v))+'</option>').join('');ss.innerHTML='<option value="">Status Exército: todos</option>'+uq(recs.map(r=>r.exercito)).map(v=>'<option value="'+esc(v)+'">'+esc(v.length>40?v.slice(0,40)+'…':v)+'</option>').join('');vs.value=cv;ss.value=cs;$('#excHeadRow').innerHTML=EXC_COLS.map(c=>{if(c.key==='_check')return'<th style="width:30px;"><input type="checkbox" onchange="toggleAllExc(this.checked)"></th>';return'<th>'+c.label+'</th>'}).join('');let filtered=recs;const q=excState.search.toLowerCase().trim();if(q)filtered=filtered.filter(r=>Object.values(r).map(v=>String(v==null?'':v)).join(' ').toLowerCase().includes(q));if(excState.vend)filtered=filtered.filter(r=>r.vendedor===excState.vend);if(excState.status)filtered=filtered.filter(r=>r.exercito===excState.status);if(excState.dates&&excState.dates.length>0){filtered=filtered.filter(r=>{const recDates=[r.envioSicovab,r.prazoEmissao,r.dataEmissao,r.dataColeta,r.prazo9dias,r.dtaPrev07,r.dtaPrev09].filter(Boolean);return recDates.some(d=>excState.dates.includes(d))})}if(excState.dateField||excState.date||excState.month||excState.year||excState.from||excState.to){filtered=filtered.filter(r=>matchTemporal(getExcDates(r,excState.dateField),excState))}$('#excCount').textContent=filtered.length+' processo'+(filtered.length===1?'':'s')+(currentUser.role==='vendedor'?' (seus)':currentUser.role==='gerente'?' (sua equipe)':'');const pp=excState.perPage,total=filtered.length,pages=Math.max(1,Math.ceil(total/pp));if(excState.page>pages)excState.page=pages;const start=(excState.page-1)*pp,rows=filtered.slice(start,start+pp),tb=$('#excBody');if(!rows.length){tb.innerHTML='<tr><td colspan="'+EXC_COLS.length+'" style="text-align:center;padding:40px;color:var(--muted)">Nenhum processo encontrado</td></tr>'}else{tb.innerHTML=rows.map(r=>{const isChecked=selectedExc.has(String(r.os))?'checked':'';return'<tr data-id="'+esc(r._id||r.os)+'"><td onclick="event.stopPropagation()" style="text-align:center"><input type="checkbox" onchange="toggleExcSelection(\''+esc(r.os)+'\', this.checked)" '+isChecked+'></td><td class="os">'+esc(r.os||'—')+'</td><td style="max-width:180px;overflow:hidden;text-overflow:ellipsis">'+esc(r.cliente||'—')+'</td><td><span class="vend-pill"><span class="vend-dot" style="background:'+vendColor(r.vendedor)+'">'+esc((vendName(r.vendedor)||'?')[0].toUpperCase())+'</span>'+esc(vendName(r.vendedor)||'—')+'</span></td><td>'+esc(r.modelo||'—')+'</td><td style="max-width:220px;overflow:hidden;text-overflow:ellipsis;font-size:10px"><span class="badge autpendente"><span class="dot"></span>'+esc(r.exercito||'—')+'</span></td><td class="mono" style="font-size:10px">'+fmtDate(r.envioSicovab)+'</td><td class="mono" style="font-size:10px">'+fmtDate(r.prazoEmissao)+'</td><td class="mono" style="font-size:10px;font-weight:600">'+fmtDate(r.dataEmissao)+'</td><td class="mono" style="text-align:center">'+(r.dias!=null&&r.dias!==''?r.dias:'—')+'</td><td style="max-width:200px;overflow:hidden;text-overflow:ellipsis;font-size:10px">'+esc(r.observacao||'—')+'</td></tr>'}).join('');tb.querySelectorAll('tr').forEach(tr=>{const rec=(DB.autorizacoes||[]).find(r=>String(r._id||r.os)===String(tr.dataset.id));if(rec)tr.onclick=()=>openExcDetail(rec)})}updateBulkBarExc();$('#excPgInfo').innerHTML='<b>'+(total?start+1:0)+'–'+Math.min(start+pp,total)+'</b> de <b>'+total+'</b>';let btns='';const maxB=5;let s=Math.max(1,excState.page-2),en=Math.min(pages,s+maxB-1);s=Math.max(1,en-maxB+1);for(let p=s;p<=en;p++)btns+='<button class="pg-btn '+(p===excState.page?'active':'')+'" onclick="excState.page='+p+';renderExcTable()">'+p+'</button>';$('#excPgBtns').innerHTML=btns}
+window.toggleAllExc = function(checked) {
+    const filtered=visibleExc();
+    let f2=filtered;
+    const q=excState.search.toLowerCase().trim();if(q)f2=f2.filter(r=>Object.values(r).map(v=>String(v==null?'':v)).join(' ').toLowerCase().includes(q));if(excState.vend)f2=f2.filter(r=>r.vendedor===excState.vend);if(excState.status)f2=f2.filter(r=>r.exercito===excState.status);
+    const start = (excState.page - 1) * excState.perPage;
+    const rows = f2.slice(start, start + excState.perPage);
+    rows.forEach(r => {
+        if(checked) selectedExc.add(String(r.os));
+        else selectedExc.delete(String(r.os));
+    });
+    renderExcTable();
+};
 
 function getUnifiedData(){const dbs=visibleRecords();const exc=visibleExc();const unified=new Map();dbs.forEach(r=>{unified.set(r.os,{os:r.os,cliente:r.cliente,vendedor:r.vendedor,veiculo:r.veiculo,blindagem:r.blindagem,dbs:r,aut:null})});exc.forEach(r=>{if(unified.has(r.os)){unified.get(r.os).aut=r}else{unified.set(r.os,{os:r.os,cliente:r.cliente,vendedor:r.vendedor,veiculo:r.modelo,blindagem:'',dbs:null,aut:r})}});return Array.from(unified.values())}
 function renderUnified(){populateYearSelects();const all=getUnifiedData();const uq=a=>[...new Set(a.filter(Boolean))].sort();const vs=$('#fUniVend');const cv=uniState.vend;vs.innerHTML='<option value="">Vendedor: todos</option>'+uq(all.map(r=>r.vendedor)).map(v=>'<option value="'+esc(v)+'">'+esc(vendName(v))+'</option>').join('');vs.value=cv;$('#uniHeadRow').innerHTML='<th>OS</th><th>Cliente</th><th>Vendedor</th><th>Veículo</th><th>D.B</th><th>Autorização</th><th>Emissão D.B</th><th>Aut. Exército</th><th>Timeline</th>';let filtered=all;const q=uniState.search.toLowerCase().trim();if(q)filtered=filtered.filter(r=>Object.values(r).map(v=>String(v==null?'':v)).join(' ').toLowerCase().includes(q));if(uniState.vend)filtered=filtered.filter(r=>r.vendedor===uniState.vend);if(uniState.status==='completo')filtered=filtered.filter(r=>r.dbs&&r.aut);if(uniState.status==='so-dbs')filtered=filtered.filter(r=>r.dbs&&!r.aut);if(uniState.status==='so-aut')filtered=filtered.filter(r=>!r.dbs&&r.aut);if(uniState.dateField||uniState.date||uniState.month||uniState.year||uniState.from||uniState.to){filtered=filtered.filter(r=>matchTemporal(getUniDates(r,uniState.dateField),uniState))}$('#uniCount').textContent=filtered.length+' processo'+(filtered.length===1?'':'s');const pp=uniState.perPage,total=filtered.length,pages=Math.max(1,Math.ceil(total/pp));if(uniState.page>pages)uniState.page=pages;const start=(uniState.page-1)*pp,rows=filtered.slice(start,start+pp),tb=$('#uniBody');if(!rows.length){tb.innerHTML='<tr><td colspan="9" style="text-align:center;padding:40px;color:var(--muted)">Nenhum registro encontrado</td></tr>'}else{tb.innerHTML=rows.map(r=>{const dbsStatus=r.dbs?recStatus(r.dbs):null;const dbsLabel=dbsStatus==='emitido'?'Emitida':dbsStatus==='atrasado'?'Atrasada':dbsStatus==='pendente'?'Pendente':'—';const autLabel=r.aut?'Pendente':'—';const timeline=[];if(r.dbs&&r.dbs.autorizacao)timeline.push({date:r.dbs.autorizacao,event:'Autorização',source:'dbs'});if(r.dbs&&r.dbs.emissaoTermo)timeline.push({date:r.dbs.emissaoTermo,event:'Emissão Termo',source:'dbs'});if(r.dbs&&r.dbs.emissaoDB)timeline.push({date:r.dbs.emissaoDB,event:'Emissão D.B',source:'dbs'});if(r.aut&&r.aut.envioSicovab)timeline.push({date:r.aut.envioSicovab,event:'Envio Sicovab',source:'aut'});if(r.aut&&r.aut.dataEmissao)timeline.push({date:r.aut.dataEmissao,event:'Aut. Exército',source:'aut'});timeline.sort((a,b)=>a.date.localeCompare(b.date));const timelineHtml=timeline.slice(-3).map(t=>'<div class="timeline-item"><span class="timeline-date">'+fmtDate(t.date)+'</span><span class="timeline-event">'+t.event+'</span><span class="timeline-source '+t.source+'">'+(t.source==='dbs'?'D.B':'Aut.')+'</span></div>').join('');return'<tr data-os="'+esc(r.os)+'"><td class="os">'+esc(r.os||'—')+'</td><td style="max-width:160px;overflow:hidden;text-overflow:ellipsis">'+esc(r.cliente||'—')+'</td><td><span class="vend-pill"><span class="vend-dot" style="background:'+vendColor(r.vendedor)+'">'+esc((vendName(r.vendedor)||'?')[0].toUpperCase())+'</span>'+esc(vendName(r.vendedor)||'—')+'</span></td><td>'+esc(r.veiculo||'—')+'</td><td>'+(dbsStatus?'<span class="badge '+dbsStatus+'"><span class="dot"></span>'+dbsLabel+'</span>':'—')+'</td><td>'+(r.aut?'<span class="badge autpendente"><span class="dot"></span>'+autLabel+'</span>':'—')+'</td><td class="mono" style="font-size:10px">'+(r.dbs?fmtDate(r.dbs.emissaoDB):'—')+'</td><td class="mono" style="font-size:10px">'+(r.aut?fmtDate(r.aut.dataEmissao):'—')+'</td><td><div class="unified-timeline">'+(timelineHtml||'<span style="color:var(--muted);font-size:10px">Sem eventos</span>')+'</div></td></tr>'}).join('');tb.querySelectorAll('tr').forEach(tr=>{tr.onclick=()=>{const os=tr.dataset.os;const rec=getUnifiedData().find(r=>r.os===os);if(rec)openUnifiedDetail(rec)}})}$('#uniPgInfo').innerHTML='<b>'+(total?start+1:0)+'–'+Math.min(start+pp,total)+'</b> de <b>'+total+'</b>';let btns='';const maxB=5;let s=Math.max(1,uniState.page-2),en=Math.min(pages,s+maxB-1);s=Math.max(1,en-maxB+1);for(let p=s;p<=en;p++)btns+='<button class="pg-btn '+(p===uniState.page?'active':'')+'" onclick="uniState.page='+p+';renderUnified()">'+p+'</button>';$('#uniPgBtns').innerHTML=btns}
@@ -1912,6 +2123,7 @@ async function init(){
             const idx=DB.usuarios.findIndex(x=>x.email.toLowerCase()===key);
             if(idx>=0)DB.usuarios[idx]=fresh;else DB.usuarios.push(fresh);
             DB.deletedUsers=(DB.deletedUsers||[]).filter(d=>d!==key);
+            DB.usuarios = cleanDuplicateUsers(DB.usuarios); // Limpa no login
             try{await saveUsersVault()}catch(e){}
             res=tryLogin(emailVal,passVal);
           }
@@ -2013,6 +2225,7 @@ async function init(){
   window.__dbReady=true;
   ensureAdmin();
   [...(DB.declaracoes||[]).map(r=>r.vendedor),...(DB.autorizacoes||[]).map(r=>r.vendedor)].filter(Boolean).forEach(ensureVendedorUser);
+  DB.usuarios = cleanDuplicateUsers(DB.usuarios); // Limpa ao iniciar
   await saveLocalOnly();
   applyTheme();
   populateYearSelects();
@@ -2035,5 +2248,7 @@ async function init(){
 }
 init();
 </script>
+</body>
+</html>
 </body>
 </html>
