@@ -207,8 +207,6 @@ td.os{font-family:'JetBrains Mono',monospace;font-weight:600;color:var(--primary
 .bulk-bar button { background: #fff; color: var(--primary); padding: 6px 12px; border-radius: 15px; font-weight: bold; border: none; cursor: pointer; font-size: 11px;}
 .bulk-bar button:hover { background: var(--accent-soft); }
 .bulk-bar button.danger { color: var(--red); }
-/* CHECKBOX CUSTOMIZADO */
-input[type="checkbox"] { width: 20px; height: 20px; cursor: pointer; accent-color: var(--primary); }
 
 @media(max-width:1100px){.dash-bottom-grid{grid-template-columns:1fr}}
 @media(max-width:960px){
@@ -616,8 +614,11 @@ function cleanDuplicateUsers(users) {
   users.forEach(u => {
     if (!u || !u.email) return;
     const email = u.email.trim().toLowerCase();
+    // Normaliza o prefixo do email (ex: flavia.silva -> flaviasilva)
     const prefix = normIdentity(vendName(email)); 
     const normName = normIdentity(u.name);
+    
+    // Chave de agrupamento: prefixo do email normalizado ou nome normalizado
     const key = prefix || normName || email; 
     
     if (!map.has(key)) {
@@ -626,13 +627,21 @@ function cleanDuplicateUsers(users) {
       const cur = map.get(key);
       const sCur = getUserStamp(cur);
       const sNew = getUserStamp(u);
+      
+      // Mantém o que tem dados mais recentes
       const best = sNew > sCur ? u : cur;
       const worst = sNew > sCur ? cur : u;
       
+      // Prefere o e-mail que tenha ponto (mais amigável), senão usa o do best
       const bestEmail = best.email.includes('.') ? best.email : (worst.email.includes('.') ? worst.email : best.email);
       const bestName = best.name || worst.name || vendName(bestEmail);
       
-      map.set(key, { ...worst, ...best, email: bestEmail, name: bestName });
+      map.set(key, {
+        ...worst,
+        ...best,
+        email: bestEmail,
+        name: bestName
+      });
     }
   });
   return Array.from(map.values());
@@ -740,6 +749,7 @@ async function loadAllDatabases(){
     DB.usuarios=mergeUsersVault(embedded&&embedded.usuarios,locData&&locData.usuarios,idbData&&idbData.usuarios,locVaultUsers,idbVaultUsers);
   }
   
+  // LIMPEZA ANTI-DUPLICIDADE
   DB.usuarios = cleanDuplicateUsers(DB.usuarios);
 
   sources.forEach(s=>{
@@ -775,7 +785,7 @@ async function pushToCloud(scope='all'){
       }
       if(Array.isArray(remoteUsers)){
         DB.usuarios=mergeUsersVault(remoteUsers,DB.usuarios);
-        DB.usuarios = cleanDuplicateUsers(DB.usuarios);
+        DB.usuarios = cleanDuplicateUsers(DB.usuarios); // Limpa aqui também
         await saveUsersVault();
       }
       await fetchWithTimeout(uUrl,{
@@ -867,7 +877,7 @@ async function pullFromCloud(silent=true){
   if(Array.isArray(remoteUsers)&&remoteUsers.length){
     const beforeJSON=JSON.stringify(DB.usuarios);
     DB.usuarios=mergeUsersVault(DB.usuarios,remoteUsers);
-    DB.usuarios = cleanDuplicateUsers(DB.usuarios);
+    DB.usuarios = cleanDuplicateUsers(DB.usuarios); // Limpa após merge
     if(JSON.stringify(DB.usuarios)!==beforeJSON)updated=true;
   }
   if(remoteSheets){
@@ -1403,12 +1413,15 @@ function ensureVendedorUser(rawVend){
   if(!rawVend)return;
   const v=String(rawVend).trim();
   if(!v||v==='—'||v==='-')return;
+  
+  // Verifica se já existe pelo nome normalizado ou prefixo do email
   const normV = normIdentity(v);
   const exists = DB.usuarios.some(u => {
      const uNameNorm = normIdentity(u.name);
      const uPrefixNorm = normIdentity(vendName(u.email));
      return uNameNorm === normV || uPrefixNorm === normV;
   });
+  
   if(exists) return;
 
   const isEmail=v.includes('@');
@@ -1761,7 +1774,7 @@ function openUserForm(existing,idx){
       }
       DB.usuarios[idx]=u;
     }
-    DB.usuarios = cleanDuplicateUsers(DB.usuarios);
+    DB.usuarios = cleanDuplicateUsers(DB.usuarios); // Limpa após salvar
     await saveDB('users');
     closeModal();
     renderUsers();
@@ -1795,7 +1808,7 @@ function visibleExc(){
 function fillFilters(){populateYearSelects();const recs=visibleRecords();const uq=a=>[...new Set(a.filter(Boolean))].sort();const vs=$('#fVend'),cs=$('#fCliente'),bs=$('#fBlind');const cv=tableState.vend,cc=tableState.cli,cb=tableState.blind;vs.innerHTML='<option value="">Vendedor: todos</option>'+uq(recs.map(r=>r.vendedor)).map(v=>'<option value="'+esc(v)+'">'+esc(vendName(v))+'</option>').join('');cs.innerHTML='<option value="">Cliente: todos</option>'+uq(recs.map(r=>r.cliente)).map(v=>'<option value="'+esc(v)+'">'+esc(v.length>35?v.slice(0,35)+'…':v)+'</option>').join('');bs.innerHTML='<option value="">Blindagem: todas</option>'+uq(recs.map(r=>r.blindagem)).map(v=>'<option value="'+esc(v)+'">'+esc(v)+'</option>').join('');vs.value=cv;cs.value=cc;bs.value=cb}
 function getFiltered(){let recs=visibleRecords();const q=tableState.search.toLowerCase().trim();if(q)recs=recs.filter(r=>Object.values(r).map(v=>String(v==null?'':v)).join(' ').toLowerCase().includes(q)||vendName(r.vendedor).includes(q));if(tableState.vend)recs=recs.filter(r=>r.vendedor===tableState.vend);if(tableState.cli)recs=recs.filter(r=>r.cliente===tableState.cli);if(tableState.blind)recs=recs.filter(r=>r.blindagem===tableState.blind);if(tableState.status)recs=recs.filter(r=>recStatus(r)===tableState.status);if(tableState.dateField||tableState.date||tableState.month||tableState.year||tableState.from||tableState.to){recs=recs.filter(r=>matchTemporal(getDbsDates(r,tableState.dateField),tableState))}const k=tableState.sortKey,d=tableState.sortDir==='asc'?1:-1;return[...recs].sort((a,b)=>{let va,vb;if(k==='dias'){va=Number(a[k])||0;vb=Number(b[k])||0;return(va-vb)*d}va=String(a[k]||'').toLowerCase();vb=String(b[k]||'').toLowerCase();return va<vb?-d:va>vb?d:0})}
 const COLS=[{key:'_check',label:''},{key:'os',label:'OS'},{key:'cliente',label:'Cliente'},{key:'veiculo',label:'Veículo'},{key:'blindagem',label:'Blindagem'},{key:'vendedor',label:'Vendedor'},{key:'autorizacao',label:'Autorização'},{key:'emissaoTermo',label:'Emi. Termo'},{key:'engenhariaAss',label:'Eng. Ass.'},{key:'procAss',label:'Proc. Ass.'},{key:'diaAss',label:'Dia'},{key:'sicovabEnvio',label:'Sicovab'},{key:'prazoEmissaoDB',label:'Prazo D.B'},{key:'emissaoDB',label:'Emissão D.B'},{key:'dias',label:'Dias'},{key:'_status',label:'Status'}];
-function renderTable(){fillFilters();$('#theadRow').innerHTML=COLS.map(c=>{if(c.key==='_check')return'<th style="width:30px;"><input type="checkbox" onchange="toggleAllDbs(this.checked)"></th>';const arr=tableState.sortKey===c.key?(tableState.sortDir==='asc'?'▲':'▼'):'';return'<th data-k="'+c.key+'">'+c.label+' <span style="opacity:.5;font-size:8px">'+arr+'</span></th>'}).join('');$$('#theadRow th').forEach(th=>th.onclick=()=>{const k=th.dataset.k;if(!k||k==='_check')return;if(tableState.sortKey===k)tableState.sortDir=tableState.sortDir==='asc'?'desc':'asc';else{tableState.sortKey=k;tableState.sortDir='asc'}tableState.page=1;renderTable()});const all=getFiltered();$('#recCount').textContent=all.length+' registro'+(all.length===1?'':'s')+(currentUser.role==='vendedor'?' (seus)':currentUser.role==='gerente'?' (sua equipe)':'');const pp=tableState.perPage,total=all.length,pages=Math.max(1,Math.ceil(total/pp));if(tableState.page>pages)tableState.page=pages;const start=(tableState.page-1)*pp,rows=all.slice(start,start+pp),tb=$('#tbodyRec');if(!rows.length){tb.innerHTML='<tr><td colspan="'+COLS.length+'" style="text-align:center;padding:40px;color:var(--muted)">Nenhum registro encontrado</td></tr>'}else{tb.innerHTML=rows.map(r=>{const st=recStatus(r);const lbl=st==='emitido'?'Emitida':st==='atrasado'?'Atrasada':'Pendente';const isChecked=selectedDbs.has(String(r.os))?'checked':'';return'<tr data-id="'+esc(r._id||r.os)+'"><td style="text-align:center"><input type="checkbox" onclick="event.stopPropagation(); toggleDbSelection(\''+esc(r.os)+'\', this.checked)" '+isChecked+'></td><td class="os">'+esc(r.os||'—')+'</td><td style="max-width:160px;overflow:hidden;text-overflow:ellipsis">'+esc(r.cliente||'—')+'</td><td>'+esc(r.veiculo||'—')+'</td><td style="max-width:140px;overflow:hidden;text-overflow:ellipsis">'+esc(r.blindagem||'—')+'</td><td><span class="vend-pill"><span class="vend-dot" style="background:'+vendColor(r.vendedor)+'">'+esc((vendName(r.vendedor)||'?')[0].toUpperCase())+'</span>'+esc(vendName(r.vendedor)||'—')+'</span></td><td class="mono" style="font-size:10px">'+fmtDate(r.autorizacao)+'</td><td class="mono" style="font-size:10px">'+fmtDate(r.emissaoTermo)+'</td><td class="mono" style="font-size:10px">'+fmtDate(r.engenhariaAss)+'</td><td class="mono" style="font-size:10px">'+fmtDate(r.procAss)+'</td><td style="font-size:9px">'+esc(r.diaAss||'—')+'</td><td class="mono" style="font-size:10px">'+fmtDate(r.sicovabEnvio)+'</td><td class="mono" style="font-size:10px">'+fmtDate(r.prazoEmissaoDB)+'</td><td class="mono" style="font-size:10px;font-weight:600">'+fmtDate(r.emissaoDB)+'</td><td class="mono" style="text-align:center">'+(r.dias!=null&&r.dias!==''?r.dias:'—')+'</td><td><span class="badge '+st+'"><span class="dot"></span>'+lbl+'</span></td></tr>'}).join('');tb.querySelectorAll('tr').forEach(tr=>{const rec=DB.declaracoes.find(r=>(r._id||r.os)===tr.dataset.id);if(rec)tr.onclick=()=>openDetail(rec)})}updateBulkBarDbs();$('#pgInfo').innerHTML='<b>'+(total?start+1:0)+'–'+Math.min(start+pp,total)+'</b> de <b>'+total+'</b>';let btns='';const maxB=5;let s=Math.max(1,tableState.page-2),en=Math.min(pages,s+maxB-1);s=Math.max(1,en-maxB+1);for(let p=s;p<=en;p++)btns+='<button class="pg-btn '+(p===tableState.page?'active':'')+'" onclick="tableState.page='+p+';renderTable()">'+p+'</button>';$('#pgBtns').innerHTML=btns}
+function renderTable(){fillFilters();$('#theadRow').innerHTML=COLS.map(c=>{if(c.key==='_check')return'<th style="width:30px;"><input type="checkbox" onchange="toggleAllDbs(this.checked)"></th>';const arr=tableState.sortKey===c.key?(tableState.sortDir==='asc'?'▲':'▼'):'';return'<th data-k="'+c.key+'">'+c.label+' <span style="opacity:.5;font-size:8px">'+arr+'</span></th>'}).join('');$$('#theadRow th').forEach(th=>th.onclick=()=>{const k=th.dataset.k;if(!k||k==='_check')return;if(tableState.sortKey===k)tableState.sortDir=tableState.sortDir==='asc'?'desc':'asc';else{tableState.sortKey=k;tableState.sortDir='asc'}tableState.page=1;renderTable()});const all=getFiltered();$('#recCount').textContent=all.length+' registro'+(all.length===1?'':'s')+(currentUser.role==='vendedor'?' (seus)':currentUser.role==='gerente'?' (sua equipe)':'');const pp=tableState.perPage,total=all.length,pages=Math.max(1,Math.ceil(total/pp));if(tableState.page>pages)tableState.page=pages;const start=(tableState.page-1)*pp,rows=all.slice(start,start+pp),tb=$('#tbodyRec');if(!rows.length){tb.innerHTML='<tr><td colspan="'+COLS.length+'" style="text-align:center;padding:40px;color:var(--muted)">Nenhum registro encontrado</td></tr>'}else{tb.innerHTML=rows.map(r=>{const st=recStatus(r);const lbl=st==='emitido'?'Emitida':st==='atrasado'?'Atrasada':'Pendente';const isChecked=selectedDbs.has(String(r.os))?'checked':'';return'<tr data-id="'+esc(r._id||r.os)+'"><td onclick="event.stopPropagation()" style="text-align:center"><input type="checkbox" onchange="toggleDbSelection(\''+esc(r.os)+'\', this.checked)" '+isChecked+'></td><td class="os">'+esc(r.os||'—')+'</td><td style="max-width:160px;overflow:hidden;text-overflow:ellipsis">'+esc(r.cliente||'—')+'</td><td>'+esc(r.veiculo||'—')+'</td><td style="max-width:140px;overflow:hidden;text-overflow:ellipsis">'+esc(r.blindagem||'—')+'</td><td><span class="vend-pill"><span class="vend-dot" style="background:'+vendColor(r.vendedor)+'">'+esc((vendName(r.vendedor)||'?')[0].toUpperCase())+'</span>'+esc(vendName(r.vendedor)||'—')+'</span></td><td class="mono" style="font-size:10px">'+fmtDate(r.autorizacao)+'</td><td class="mono" style="font-size:10px">'+fmtDate(r.emissaoTermo)+'</td><td class="mono" style="font-size:10px">'+fmtDate(r.engenhariaAss)+'</td><td class="mono" style="font-size:10px">'+fmtDate(r.procAss)+'</td><td style="font-size:9px">'+esc(r.diaAss||'—')+'</td><td class="mono" style="font-size:10px">'+fmtDate(r.sicovabEnvio)+'</td><td class="mono" style="font-size:10px">'+fmtDate(r.prazoEmissaoDB)+'</td><td class="mono" style="font-size:10px;font-weight:600">'+fmtDate(r.emissaoDB)+'</td><td class="mono" style="text-align:center">'+(r.dias!=null&&r.dias!==''?r.dias:'—')+'</td><td><span class="badge '+st+'"><span class="dot"></span>'+lbl+'</span></td></tr>'}).join('');tb.querySelectorAll('tr').forEach(tr=>{const rec=DB.declaracoes.find(r=>(r._id||r.os)===tr.dataset.id);if(rec)tr.onclick=()=>openDetail(rec)})}updateBulkBarDbs();$('#pgInfo').innerHTML='<b>'+(total?start+1:0)+'–'+Math.min(start+pp,total)+'</b> de <b>'+total+'</b>';let btns='';const maxB=5;let s=Math.max(1,tableState.page-2),en=Math.min(pages,s+maxB-1);s=Math.max(1,en-maxB+1);for(let p=s;p<=en;p++)btns+='<button class="pg-btn '+(p===tableState.page?'active':'')+'" onclick="tableState.page='+p+';renderTable()">'+p+'</button>';$('#pgBtns').innerHTML=btns}
 window.toggleAllDbs = function(checked) {
     const all = getFiltered();
     const start = (tableState.page - 1) * tableState.perPage;
@@ -1808,7 +1821,7 @@ window.toggleAllDbs = function(checked) {
 };
 
 const EXC_COLS=[{key:'_check',label:''},{key:'os',label:'OS'},{key:'cliente',label:'Cliente'},{key:'vendedor',label:'Vendedor'},{key:'modelo',label:'Modelo'},{key:'exercito',label:'Status Exército'},{key:'envioSicovab',label:'Envio Sicovab'},{key:'prazoEmissao',label:'Prazo Emissão'},{key:'dataEmissao',label:'Data Emissão'},{key:'dias',label:'Dias'},{key:'observacao',label:'Observação'}];
-function renderExcTable(){populateYearSelects();const recs=visibleExc();const uq=a=>[...new Set(a.filter(Boolean))].sort();const vs=$('#fExcVend'),ss=$('#fExcStatus');const cv=excState.vend,cs=excState.status;vs.innerHTML='<option value="">Vendedor: todos</option>'+uq(recs.map(r=>r.vendedor)).map(v=>'<option value="'+esc(v)+'">'+esc(vendName(v))+'</option>').join('');ss.innerHTML='<option value="">Status Exército: todos</option>'+uq(recs.map(r=>r.exercito)).map(v=>'<option value="'+esc(v)+'">'+esc(v.length>40?v.slice(0,40)+'…':v)+'</option>').join('');vs.value=cv;ss.value=cs;$('#excHeadRow').innerHTML=EXC_COLS.map(c=>{if(c.key==='_check')return'<th style="width:30px;"><input type="checkbox" onchange="toggleAllExc(this.checked)"></th>';return'<th>'+c.label+'</th>'}).join('');let filtered=recs;const q=excState.search.toLowerCase().trim();if(q)filtered=filtered.filter(r=>Object.values(r).map(v=>String(v==null?'':v)).join(' ').toLowerCase().includes(q));if(excState.vend)filtered=filtered.filter(r=>r.vendedor===excState.vend);if(excState.status)filtered=filtered.filter(r=>r.exercito===excState.status);if(excState.dates&&excState.dates.length>0){filtered=filtered.filter(r=>{const recDates=[r.envioSicovab,r.prazoEmissao,r.dataEmissao,r.dataColeta,r.prazo9dias,r.dtaPrev07,r.dtaPrev09].filter(Boolean);return recDates.some(d=>excState.dates.includes(d))})}if(excState.dateField||excState.date||excState.month||excState.year||excState.from||excState.to){filtered=filtered.filter(r=>matchTemporal(getExcDates(r,excState.dateField),excState))}$('#excCount').textContent=filtered.length+' processo'+(filtered.length===1?'':'s')+(currentUser.role==='vendedor'?' (seus)':currentUser.role==='gerente'?' (sua equipe)':'');const pp=excState.perPage,total=filtered.length,pages=Math.max(1,Math.ceil(total/pp));if(excState.page>pages)excState.page=pages;const start=(excState.page-1)*pp,rows=filtered.slice(start,start+pp),tb=$('#excBody');if(!rows.length){tb.innerHTML='<tr><td colspan="'+EXC_COLS.length+'" style="text-align:center;padding:40px;color:var(--muted)">Nenhum processo encontrado</td></tr>'}else{tb.innerHTML=rows.map(r=>{const isChecked=selectedExc.has(String(r.os))?'checked':'';return'<tr data-id="'+esc(r._id||r.os)+'"><td style="text-align:center"><input type="checkbox" onclick="event.stopPropagation(); toggleExcSelection(\''+esc(r.os)+'\', this.checked)" '+isChecked+'></td><td class="os">'+esc(r.os||'—')+'</td><td style="max-width:180px;overflow:hidden;text-overflow:ellipsis">'+esc(r.cliente||'—')+'</td><td><span class="vend-pill"><span class="vend-dot" style="background:'+vendColor(r.vendedor)+'">'+esc((vendName(r.vendedor)||'?')[0].toUpperCase())+'</span>'+esc(vendName(r.vendedor)||'—')+'</span></td><td>'+esc(r.modelo||'—')+'</td><td style="max-width:220px;overflow:hidden;text-overflow:ellipsis;font-size:10px"><span class="badge autpendente"><span class="dot"></span>'+esc(r.exercito||'—')+'</span></td><td class="mono" style="font-size:10px">'+fmtDate(r.envioSicovab)+'</td><td class="mono" style="font-size:10px">'+fmtDate(r.prazoEmissao)+'</td><td class="mono" style="font-size:10px;font-weight:600">'+fmtDate(r.dataEmissao)+'</td><td class="mono" style="text-align:center">'+(r.dias!=null&&r.dias!==''?r.dias:'—')+'</td><td style="max-width:200px;overflow:hidden;text-overflow:ellipsis;font-size:10px">'+esc(r.observacao||'—')+'</td></tr>'}).join('');tb.querySelectorAll('tr').forEach(tr=>{const rec=(DB.autorizacoes||[]).find(r=>String(r._id||r.os)===String(tr.dataset.id));if(rec)tr.onclick=()=>openExcDetail(rec)})}updateBulkBarExc();$('#excPgInfo').innerHTML='<b>'+(total?start+1:0)+'–'+Math.min(start+pp,total)+'</b> de <b>'+total+'</b>';let btns='';const maxB=5;let s=Math.max(1,excState.page-2),en=Math.min(pages,s+maxB-1);s=Math.max(1,en-maxB+1);for(let p=s;p<=en;p++)btns+='<button class="pg-btn '+(p===excState.page?'active':'')+'" onclick="excState.page='+p+';renderExcTable()">'+p+'</button>';$('#excPgBtns').innerHTML=btns}
+function renderExcTable(){populateYearSelects();const recs=visibleExc();const uq=a=>[...new Set(a.filter(Boolean))].sort();const vs=$('#fExcVend'),ss=$('#fExcStatus');const cv=excState.vend,cs=excState.status;vs.innerHTML='<option value="">Vendedor: todos</option>'+uq(recs.map(r=>r.vendedor)).map(v=>'<option value="'+esc(v)+'">'+esc(vendName(v))+'</option>').join('');ss.innerHTML='<option value="">Status Exército: todos</option>'+uq(recs.map(r=>r.exercito)).map(v=>'<option value="'+esc(v)+'">'+esc(v.length>40?v.slice(0,40)+'…':v)+'</option>').join('');vs.value=cv;ss.value=cs;$('#excHeadRow').innerHTML=EXC_COLS.map(c=>{if(c.key==='_check')return'<th style="width:30px;"><input type="checkbox" onchange="toggleAllExc(this.checked)"></th>';return'<th>'+c.label+'</th>'}).join('');let filtered=recs;const q=excState.search.toLowerCase().trim();if(q)filtered=filtered.filter(r=>Object.values(r).map(v=>String(v==null?'':v)).join(' ').toLowerCase().includes(q));if(excState.vend)filtered=filtered.filter(r=>r.vendedor===excState.vend);if(excState.status)filtered=filtered.filter(r=>r.exercito===excState.status);if(excState.dates&&excState.dates.length>0){filtered=filtered.filter(r=>{const recDates=[r.envioSicovab,r.prazoEmissao,r.dataEmissao,r.dataColeta,r.prazo9dias,r.dtaPrev07,r.dtaPrev09].filter(Boolean);return recDates.some(d=>excState.dates.includes(d))})}if(excState.dateField||excState.date||excState.month||excState.year||excState.from||excState.to){filtered=filtered.filter(r=>matchTemporal(getExcDates(r,excState.dateField),excState))}$('#excCount').textContent=filtered.length+' processo'+(filtered.length===1?'':'s')+(currentUser.role==='vendedor'?' (seus)':currentUser.role==='gerente'?' (sua equipe)':'');const pp=excState.perPage,total=filtered.length,pages=Math.max(1,Math.ceil(total/pp));if(excState.page>pages)excState.page=pages;const start=(excState.page-1)*pp,rows=filtered.slice(start,start+pp),tb=$('#excBody');if(!rows.length){tb.innerHTML='<tr><td colspan="'+EXC_COLS.length+'" style="text-align:center;padding:40px;color:var(--muted)">Nenhum processo encontrado</td></tr>'}else{tb.innerHTML=rows.map(r=>{const isChecked=selectedExc.has(String(r.os))?'checked':'';return'<tr data-id="'+esc(r._id||r.os)+'"><td onclick="event.stopPropagation()" style="text-align:center"><input type="checkbox" onchange="toggleExcSelection(\''+esc(r.os)+'\', this.checked)" '+isChecked+'></td><td class="os">'+esc(r.os||'—')+'</td><td style="max-width:180px;overflow:hidden;text-overflow:ellipsis">'+esc(r.cliente||'—')+'</td><td><span class="vend-pill"><span class="vend-dot" style="background:'+vendColor(r.vendedor)+'">'+esc((vendName(r.vendedor)||'?')[0].toUpperCase())+'</span>'+esc(vendName(r.vendedor)||'—')+'</span></td><td>'+esc(r.modelo||'—')+'</td><td style="max-width:220px;overflow:hidden;text-overflow:ellipsis;font-size:10px"><span class="badge autpendente"><span class="dot"></span>'+esc(r.exercito||'—')+'</span></td><td class="mono" style="font-size:10px">'+fmtDate(r.envioSicovab)+'</td><td class="mono" style="font-size:10px">'+fmtDate(r.prazoEmissao)+'</td><td class="mono" style="font-size:10px;font-weight:600">'+fmtDate(r.dataEmissao)+'</td><td class="mono" style="text-align:center">'+(r.dias!=null&&r.dias!==''?r.dias:'—')+'</td><td style="max-width:200px;overflow:hidden;text-overflow:ellipsis;font-size:10px">'+esc(r.observacao||'—')+'</td></tr>'}).join('');tb.querySelectorAll('tr').forEach(tr=>{const rec=(DB.autorizacoes||[]).find(r=>String(r._id||r.os)===String(tr.dataset.id));if(rec)tr.onclick=()=>openExcDetail(rec)})}updateBulkBarExc();$('#excPgInfo').innerHTML='<b>'+(total?start+1:0)+'–'+Math.min(start+pp,total)+'</b> de <b>'+total+'</b>';let btns='';const maxB=5;let s=Math.max(1,excState.page-2),en=Math.min(pages,s+maxB-1);s=Math.max(1,en-maxB+1);for(let p=s;p<=en;p++)btns+='<button class="pg-btn '+(p===excState.page?'active':'')+'" onclick="excState.page='+p+';renderExcTable()">'+p+'</button>';$('#excPgBtns').innerHTML=btns}
 window.toggleAllExc = function(checked) {
     const filtered=visibleExc();
     let f2=filtered;
@@ -2110,7 +2123,7 @@ async function init(){
             const idx=DB.usuarios.findIndex(x=>x.email.toLowerCase()===key);
             if(idx>=0)DB.usuarios[idx]=fresh;else DB.usuarios.push(fresh);
             DB.deletedUsers=(DB.deletedUsers||[]).filter(d=>d!==key);
-            DB.usuarios = cleanDuplicateUsers(DB.usuarios);
+            DB.usuarios = cleanDuplicateUsers(DB.usuarios); // Limpa no login
             try{await saveUsersVault()}catch(e){}
             res=tryLogin(emailVal,passVal);
           }
@@ -2212,7 +2225,7 @@ async function init(){
   window.__dbReady=true;
   ensureAdmin();
   [...(DB.declaracoes||[]).map(r=>r.vendedor),...(DB.autorizacoes||[]).map(r=>r.vendedor)].filter(Boolean).forEach(ensureVendedorUser);
-  DB.usuarios = cleanDuplicateUsers(DB.usuarios);
+  DB.usuarios = cleanDuplicateUsers(DB.usuarios); // Limpa ao iniciar
   await saveLocalOnly();
   applyTheme();
   populateYearSelects();
