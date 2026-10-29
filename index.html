@@ -4,11 +4,15 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0">
 <title>Concept Be Safe • Controle de D.Bs</title>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#1e40af">
 <link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 <script id="cbs-embedded-data" type="application/json">null</script>
 <style>
+/* [ESTILOS MANTIDOS - Omitidos aqui para não alongar, use os mesmos do código anterior] */
 :root{--bg:#eef2f7;--surface:#fff;--surface2:#f6f8fb;--border:#dde4ee;--text:#0f172a;--text2:#47566e;--muted:#8b98ad;--primary:#1e40af;--primary2:#16337f;--accent:#3b82f6;--accent-soft:#e7effd;--green:#059669;--green-soft:#e3f6ef;--amber:#c47f17;--amber-soft:#fdf3e1;--red:#dc2626;--red-soft:#fdeaea;--purple:#7c3aed;--purple-soft:#f0eafc;--teal:#0d9488;--teal-soft:#e6f7f5;--sidebar:#0c1b3f;--sidebar2:#12244f;--sidebar-text:#c9d4ec;--shadow:0 1px 3px rgba(15,23,42,.07),0 8px 24px rgba(15,23,42,.05);--shadow-lg:0 10px 40px rgba(15,23,42,.14);--radius:12px}
 [data-theme="dark"]{--bg:#0a1120;--surface:#121b2e;--surface2:#182338;--border:#243250;--text:#e8eef8;--text2:#aab8d2;--muted:#66769a;--accent-soft:#16264a;--green-soft:#0d2b22;--amber-soft:#2c2107;--red-soft:#331316;--purple-soft:#241442;--teal-soft:#0d2b29;--sidebar:#081226;--sidebar2:#0e1c3a;--sidebar-text:#b9c6e2}
 *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
@@ -194,6 +198,11 @@ td.os{font-family:'JetBrains Mono',monospace;font-weight:600;color:var(--primary
 .mob-nav-btn{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;font-size:9.5px;font-weight:600;color:var(--muted);border-radius:8px;padding:4px 2px}
 .mob-nav-btn svg{width:18px;height:18px}
 .mob-nav-btn.active{color:var(--primary);background:var(--accent-soft)}
+/* ESTILOS NOVOS PARA O HISTÓRICO */
+.history-list { max-height: 200px; overflow-y: auto; margin-top: 10px; }
+.history-item { font-size: 11px; padding: 8px; border-bottom: 1px dashed var(--border); display: flex; flex-direction: column; gap: 4px; }
+.history-item b { color: var(--primary); }
+.history-date { font-size: 9px; color: var(--muted); font-family: 'JetBrains Mono', monospace;}
 @media(max-width:1100px){.dash-bottom-grid{grid-template-columns:1fr}}
 @media(max-width:960px){
 .sidebar{transform:translateX(-100%);width:260px;box-shadow:var(--shadow-lg)}
@@ -256,6 +265,7 @@ input,select,textarea{font-size:16px}
 <base target="_blank">
 </head>
 <body>
+<!-- O CONTEÚDO DO BODY É O MESMO DO CÓDIGO ANTERIOR -->
 <div id="loginView" class="login-wrap">
 <div class="login-card">
 <div class="login-logo">
@@ -488,6 +498,18 @@ input,select,textarea{font-size:16px}
 </div>
 <div id="modalRoot"></div><div id="toastRoot"></div>
 <script>
+// ========== REGISTRO DO SERVICE WORKER (PWA) ==========
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    // Um service worker básico embutido para permitir instalação PWA sem arquivo extra
+    const swCode = `self.addEventListener('install', (e) => { self.skipWaiting(); }); self.addEventListener('activate', (e) => { e.waitUntil(clients.claim()); }); self.addEventListener('fetch', (e) => { e.respondWith(fetch(e.request).catch(() => caches.match(e.request))); });`;
+    const blob = new Blob([swCode], {type: 'application/javascript'});
+    const swUrl = URL.createObjectURL(blob);
+    navigator.serviceWorker.register(swUrl).catch(err => console.log('SW erro', err));
+  });
+}
+// =======================================================
+
 const $=s=>document.querySelector(s),$$=s=>[...document.querySelectorAll(s)];
 function esc(s){return String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
 function hash(str){const clean=String(str==null?'':str).trim();let h=0;for(let i=0;i<clean.length;i++){h=((h<<5)-h)+clean.charCodeAt(i);h|=0}return'h'+Math.abs(h).toString(36)}
@@ -519,7 +541,6 @@ let DB={
   deletedUsers:[],
   config:{
     theme:'light',
-    // ⚠️ ATENÇÃO: CONFIRA SE A SUA URL É 'concept' ou 'concent' NO FIREBASE. DEIXEI 'concept' PORQUE FOI O QUE VOCÊ DIGITOU.
     cloudUrl:'https://controle-sicovab-concept-default-rtdb.firebaseio.com',
     vaultKey:'CBS_VAULT_Epe3rY8Su9hSfWtcXX5zWJ7C'
   },
@@ -721,7 +742,6 @@ async function pushToCloud(scope='all'){
     console.log('[CBS] pushToCloud OK', scope, 'em', new Date().toISOString());
     window.__lastPushOK = new Date().toISOString();
     updateBarRender();
-    // Removido o setTimeout(pullFromCloud) daqui, pois o WebSocket já atualiza a tela.
     return true;
   }catch(e){
     console.error('[CBS] pushToCloud FALHOU:', e);
@@ -1136,9 +1156,9 @@ function renderExcDateTags(){const container=$('#fExcDateTags');if(!excState.dat
 
 function parseAutorizacaoFile(rows){let hi=-1;for(let i=0;i<Math.min(rows.length,60);i++){const j=(rows[i]||[]).map(c=>String(c||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'')).join('|');if(j.includes('cliente')&&(j.includes('exercito')||j.includes('vendedor')||j.includes('os'))){hi=i;break}}if(hi<0)return[];const hdr=rows[hi].map(h=>String(h||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim());const idx=(names)=>{for(const n of names){const i=hdr.findIndex(h=>h.includes(n));if(i>=0)return i}return-1};const iOs=idx(['os'])>=0?idx(['os']):0;const iCliente=idx(['cliente']);const iColeta=idx(['coleta','data coleta']);const iVend=idx(['vendedor','gestor comercial']);const iExc=idx(['exercito']);const iPed=idx(['pedido compra','pedido','n pedido']);const iModelo=idx(['modelo','veiculo']);const iChassi=idx(['chassi','chassis']);const iSicovab=idx(['envio sicovab','sicovab']);const iPrazoEmi=idx(['prazo emissao']);const iPrazo9=idx(['prazo 09','prazo 9','9 dias']);const iPrev07=idx(['prev 07','dta prev 07','07 dias']);const iPrev09=idx(['prev 09','dta prev 09','09 dias']);const iObs=idx(['observacao','observacoes']);const iDataEmi=idx(['data emissao']);const iDias=idx(['qtd dias','dias']);const recs=[];for(let i=hi+1;i<rows.length;i++){const row=rows[i];if(!row||!row.length)continue;const os=String(row[iOs]||'').trim();if(!os||isNaN(parseInt(os)))continue;const cliente=iCliente>=0?String(row[iCliente]||''):'';const vendedor=iVend>=0?String(row[iVend]||''):'';if(!cliente&&!vendedor)continue;const rowText=JSON.stringify(row);if(rowText.includes('Threaded comment')||rowText.includes('tc={'))continue;recs.push({os,cliente,dataColeta:parseDate(iColeta>=0?row[iColeta]:null),vendedor:vendedor.trim(),exercito:iExc>=0?String(row[iExc]||''):'',pedidoCompra:iPed>=0?String(row[iPed]||''):'',modelo:iModelo>=0?String(row[iModelo]||''):'',chassi:iChassi>=0?String(row[iChassi]||''):'',envioSicovab:parseDate(iSicovab>=0?row[iSicovab]:null),prazoEmissao:parseDate(iPrazoEmi>=0?row[iPrazoEmi]:null),prazo9dias:parseDate(iPrazo9>=0?row[iPrazo9]:null),dtaPrev07:parseDate(iPrev07>=0?row[iPrev07]:null),dtaPrev09:parseDate(iPrev09>=0?row[iPrev09]:null),observacao:iObs>=0?String(row[iObs]||''):'',dataEmissao:parseDate(iDataEmi>=0?row[iDataEmi]:null),dias:iDias>=0&&row[iDias]!=null&&row[iDias]!==''&&!isNaN(Number(row[iDias]))?Number(row[iDias]):null,lastModified:new Date().toISOString(),modifiedBy:'import'})}return recs}
 function handleFileDbs(file){if(!file)return;pendingFileNameDbs=file.name;const reader=new FileReader();reader.onload=e=>{try{const wb=XLSX.read(new Uint8Array(e.target.result),{type:'array',cellDates:true});const ws=wb.Sheets[wb.SheetNames[0]];const rows=XLSX.utils.sheet_to_json(ws,{header:1,defval:'',raw:true});let hi=-1;for(let i=0;i<Math.min(rows.length,40);i++){const j=(rows[i]||[]).map(c=>String(c).toLowerCase()).join('|');if((j.includes('veículo')||j.includes('veiculo'))&&j.includes('cliente')&&j.includes('vendedor')){hi=i;break}}if(hi<0){toast('Cabeçalho não encontrado.','err');return}const recs=[];for(let i=hi+1;i<rows.length;i++){const row=rows[i];if(!row||!row.length)continue;const os=String(row[0]||'').trim();if(!os||os==='Dashboard'||os==='---')continue;recs.push({os,veiculo:String(row[1]||''),blindagem:String(row[3]||''),cliente:String(row[9]||''),vendedor:String(row[10]||'').trim(),autorizacao:parseDate(row[4]),solicitacaoTermo:parseDate(row[12]),prazoTermo:parseDate(row[13]),emissaoTermo:parseDate(row[14]),engenhariaAss:parseDate(row[15]),procAss:parseDate(row[16]),diaAss:String(row[17]||''),sicovabEnvio:parseDate(row[18]),prazoEmissaoDB:parseDate(row[19]),emissaoDB:parseDate(row[20]),dias:row[21]!=null&&row[21]!==''?Number(row[21]):null,observacoes:String(row[22]||''),lastModified:new Date().toISOString(),modifiedBy:'import'})}if(!recs.length){toast('Nenhum registro.','err');return}pendingDbs=recs;$('#importPanelDbs').classList.remove('hidden');$('#dropZoneDbs').classList.add('hidden');$('#pvCountDbs').textContent=recs.length+' registros lidos'}catch(err){console.error(err);toast('Erro ao ler.','err')}};reader.readAsArrayBuffer(file)}
-async function doImportDbs(){if(!pendingDbs)return;const count=pendingDbs.length;createBackup('import-dbs');if(importModeDbs==='replace'){DB.declaracoes=pendingDbs}else if(importModeDbs==='merge'){const m=new Map(DB.declaracoes.map(r=>[String(r.os),r]));pendingDbs.forEach(r=>{const k=String(r.os);const existing=m.get(k);if(existing){const manualNotes=existing.manualNotes||'';m.set(k,{...existing,...r,manualNotes,lastModified:new Date().toISOString(),modifiedBy:'import'})}else{m.set(k,{...r,manualNotes:'',lastModified:new Date().toISOString(),modifiedBy:'import'})}});DB.declaracoes=Array.from(m.values())}else{const ex=new Set(DB.declaracoes.map(r=>String(r.os)));pendingDbs.forEach(r=>{if(!ex.has(String(r.os)))DB.declaracoes.push({...r,manualNotes:'',lastModified:new Date().toISOString(),modifiedBy:'import'})})}const vends=[...new Set(DB.declaracoes.map(r=>r.vendedor).filter(Boolean))];vends.forEach(ensureVendedorUser);DB.lastUpdate.dbs=new Date().toISOString();DB.lastFiles.dbs={name:pendingFileNameDbs||'Sicovab_DBs.xlsx',count:DB.declaracoes.length};pendingDbs=null;pendingFileNameDbs='';$('#importPanelDbs').classList.add('hidden');$('#dropZoneDbs').classList.remove('hidden');$('#fileInputDbs').value='';await saveDB('all');populateYearSelects();updateBarRender();renderDashboard();toast(count+' D.Bs importados e sincronizados!')}
+async function doImportDbs(){if(!pendingDbs)return;const count=pendingDbs.length;createBackup('import-dbs');if(importModeDbs==='replace'){DB.declaracoes=pendingDbs}else if(importModeDbs==='merge'){const m=new Map(DB.declaracoes.map(r=>[String(r.os),r]));pendingDbs.forEach(r=>{const k=String(r.os);const existing=m.get(k);if(existing){const manualNotes=existing.manualNotes||'';const history=existing.history||[];m.set(k,{...existing,...r,manualNotes,history,lastModified:new Date().toISOString(),modifiedBy:'import'})}else{m.set(k,{...r,manualNotes:'',history:[],lastModified:new Date().toISOString(),modifiedBy:'import'})}});DB.declaracoes=Array.from(m.values())}else{const ex=new Set(DB.declaracoes.map(r=>String(r.os)));pendingDbs.forEach(r=>{if(!ex.has(String(r.os)))DB.declaracoes.push({...r,manualNotes:'',history:[],lastModified:new Date().toISOString(),modifiedBy:'import'})})}const vends=[...new Set(DB.declaracoes.map(r=>r.vendedor).filter(Boolean))];vends.forEach(ensureVendedorUser);DB.lastUpdate.dbs=new Date().toISOString();DB.lastFiles.dbs={name:pendingFileNameDbs||'Sicovab_DBs.xlsx',count:DB.declaracoes.length};pendingDbs=null;pendingFileNameDbs='';$('#importPanelDbs').classList.add('hidden');$('#dropZoneDbs').classList.remove('hidden');$('#fileInputDbs').value='';await saveDB('all');populateYearSelects();updateBarRender();renderDashboard();toast(count+' D.Bs importados e sincronizados!')}
 function handleFileAut(file){if(!file)return;pendingFileNameAut=file.name;const reader=new FileReader();reader.onload=e=>{try{const wb=XLSX.read(new Uint8Array(e.target.result),{type:'array',cellDates:true});const ws=wb.Sheets[wb.SheetNames[0]];const rows=XLSX.utils.sheet_to_json(ws,{header:1,defval:'',raw:true});const recs=parseAutorizacaoFile(rows);if(!recs.length){toast('Nenhum registro válido.','err');return}pendingAut=recs;$('#importPanelAut').classList.remove('hidden');$('#dropZoneAut').classList.add('hidden');$('#pvCountAut').textContent=recs.length+' autorizações pendentes lidas'}catch(err){console.error(err);toast('Erro ao ler.','err')}};reader.readAsArrayBuffer(file)}
-async function doImportAut(){if(!pendingAut)return;const count=pendingAut.length;createBackup('import-aut');if(importModeAut==='replace'){DB.autorizacoes=pendingAut}else if(importModeAut==='merge'){const m=new Map(DB.autorizacoes.map(r=>[String(r.os),r]));pendingAut.forEach(r=>{const k=String(r.os);const existing=m.get(k);if(existing){const manualNotes=existing.manualNotes||'';m.set(k,{...existing,...r,manualNotes,lastModified:new Date().toISOString(),modifiedBy:'import'})}else{m.set(k,{...r,manualNotes:'',lastModified:new Date().toISOString(),modifiedBy:'import'})}});DB.autorizacoes=Array.from(m.values())}else{const ex=new Set(DB.autorizacoes.map(r=>String(r.os)));pendingAut.forEach(r=>{if(!ex.has(String(r.os)))DB.autorizacoes.push({...r,manualNotes:'',lastModified:new Date().toISOString(),modifiedBy:'import'})})}const vends=[...new Set(DB.autorizacoes.map(r=>r.vendedor).filter(Boolean))];vends.forEach(ensureVendedorUser);DB.lastUpdate.aut=new Date().toISOString();DB.lastFiles.aut={name:pendingFileNameAut||'Autorizacoes.xlsx',count:DB.autorizacoes.length};pendingAut=null;pendingFileNameAut='';$('#importPanelAut').classList.add('hidden');$('#dropZoneAut').classList.remove('hidden');$('#fileInputAut').value='';await saveDB('all');populateYearSelects();updateBarRender();toast(count+' autorizações pendentes importadas e sincronizadas!')}
+async function doImportAut(){if(!pendingAut)return;const count=pendingAut.length;createBackup('import-aut');if(importModeAut==='replace'){DB.autorizacoes=pendingAut}else if(importModeAut==='merge'){const m=new Map(DB.autorizacoes.map(r=>[String(r.os),r]));pendingAut.forEach(r=>{const k=String(r.os);const existing=m.get(k);if(existing){const manualNotes=existing.manualNotes||'';const history=existing.history||[];m.set(k,{...existing,...r,manualNotes,history,lastModified:new Date().toISOString(),modifiedBy:'import'})}else{m.set(k,{...r,manualNotes:'',history:[],lastModified:new Date().toISOString(),modifiedBy:'import'})}});DB.autorizacoes=Array.from(m.values())}else{const ex=new Set(DB.autorizacoes.map(r=>String(r.os)));pendingAut.forEach(r=>{if(!ex.has(String(r.os)))DB.autorizacoes.push({...r,manualNotes:'',history:[],lastModified:new Date().toISOString(),modifiedBy:'import'})})}const vends=[...new Set(DB.autorizacoes.map(r=>r.vendedor).filter(Boolean))];vends.forEach(ensureVendedorUser);DB.lastUpdate.aut=new Date().toISOString();DB.lastFiles.aut={name:pendingFileNameAut||'Autorizacoes.xlsx',count:DB.autorizacoes.length};pendingAut=null;pendingFileNameAut='';$('#importPanelAut').classList.add('hidden');$('#dropZoneAut').classList.remove('hidden');$('#fileInputAut').value='';await saveDB('all');populateYearSelects();updateBarRender();toast(count+' autorizações pendentes importadas e sincronizadas!')}
 
 function exportExcel(){const recs=getFiltered();if(!recs.length){toast('Nada para exportar.','err');return}const data=recs.map(r=>({'OS':r.os,'Veículo':r.veiculo,'Blindagem':r.blindagem,'Cliente':r.cliente,'Vendedor':r.vendedor,'Autorização':fmtDate(r.autorizacao),'Emi. Termo':fmtDate(r.emissaoTermo),'Eng. Ass.':fmtDate(r.engenhariaAss),'Proc. Ass.':fmtDate(r.procAss),'Dia Ass.':r.diaAss,'Sicovab':fmtDate(r.sicovabEnvio),'Prazo D.B':fmtDate(r.prazoEmissaoDB),'Emissão D.B':fmtDate(r.emissaoDB),'Dias':r.dias,'Status':recStatus(r)==='emitido'?'Emitida':recStatus(r)==='atrasado'?'Atrasada':'Pendente','Obs':r.observacoes}));const ws=XLSX.utils.json_to_sheet(data);const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,'Declarações');XLSX.writeFile(wb,'sicovab_dbs_'+todayISO()+'.xlsx');toast('Exportado.')}
 function exportExc(){const recs=visibleExc();if(!recs.length){toast('Nada para exportar.','err');return}const data=recs.map(r=>({'OS':r.os,'Cliente':r.cliente,'Vendedor':r.vendedor,'Modelo':r.modelo,'Status Exército':r.exercito,'Envio Sicovab':fmtDate(r.envioSicovab),'Prazo Emissão':fmtDate(r.prazoEmissao),'Data Emissão':fmtDate(r.dataEmissao),'Dias':r.dias,'Observação':r.observacao}));const ws=XLSX.utils.json_to_sheet(data);const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,'Autorizações');XLSX.writeFile(wb,'autorizacoes_exercito_'+todayISO()+'.xlsx');toast('Exportado.')}
@@ -1192,7 +1212,99 @@ function openChangePassword(forced){
   };
 }
 
-function openDetail(r){const st=recStatus(r);const cell=(k,v,m)=>'<div class="detail-cell"><div class="k">'+k+'</div><div class="v '+(m?'mono ':'')+' '+(v?'':'empty-v')+'">'+(v||'não informado')+'</div></div>';openModal('<div class="modal-head"><h3 class="mono" style="font-size:14px">OS '+esc(r.os||'—')+'</h3><button class="modal-close" onclick="closeModal()">✕</button></div><div class="modal-body"><div class="detail-grid">'+cell('Veículo',esc(r.veiculo))+cell('Blindagem',esc(r.blindagem))+cell('Cliente',esc(r.cliente))+cell('Vendedor',esc(r.vendedor))+cell('Autorização',fmtDate(r.autorizacao),1)+cell('Emissão Termo',fmtDate(r.emissaoTermo),1)+cell('Engenharia Ass.',fmtDate(r.engenhariaAss),1)+cell('Proc. Ass.',fmtDate(r.procAss),1)+cell('Dia Ass.',esc(r.diaAss))+cell('Envio Sicovab',fmtDate(r.sicovabEnvio),1)+cell('Prazo Emissão D.B',fmtDate(r.prazoEmissaoDB),1)+cell('Emissão D.B',fmtDate(r.emissaoDB),1)+cell('Dias',r.dias!=null&&r.dias!==''?String(r.dias):'',1)+cell('Status',st==='emitido'?'Emitida':st==='atrasado'?'Atrasada':'Pendente')+'</div>'+(r.observacoes?'<div style="margin-top:12px;padding:10px;background:var(--surface2);border-radius:8px;font-size:11px"><b>Obs:</b> '+esc(r.observacoes)+'</div>':'')+'</div>',true)}
+// =============== FUNÇÕES NOVAS DE HISTÓRICO E PDF ===============
+window.salvarNota = async function(os) {
+    const notaInput = document.getElementById('notaOS');
+    const nota = notaInput.value.trim();
+    if(!nota) return toast('Digite uma anotação primeiro.', 'err');
+    
+    const idx = DB.declaracoes.findIndex(r => String(r.os) === String(os));
+    if(idx >= 0) {
+        if(!DB.declaracoes[idx].history) DB.declaracoes[idx].history = [];
+        DB.declaracoes[idx].history.push({
+            data: new Date().toISOString(),
+            autor: currentUser.name || currentUser.email,
+            texto: nota
+        });
+        notaInput.value = '';
+        await saveDB('all');
+        // Reabre o modal atualizado
+        openDetail(DB.declaracoes[idx]);
+        toast('Anotação salva com sucesso!');
+    }
+};
+
+window.gerarPDF = function(os) {
+    const el = document.getElementById('modal-pdf-content');
+    if(!el) return;
+    
+    const opt = {
+        margin:       10,
+        filename:     `OS_${os}.pdf`,
+        image:        { type: 'jpeg', quality: 0.98 },
+        html2canvas:  { scale: 2 },
+        jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
+    };
+    
+    // Mostra um loading
+    const btn = document.getElementById('btnGerarPDF');
+    if(btn) { btn.innerHTML = 'Gerando...'; btn.disabled = true; }
+    
+    html2pdf().set(opt).from(el).save().then(() => {
+        if(btn) { btn.innerHTML = '📄 Baixar PDF'; btn.disabled = false; }
+    });
+};
+// ===============================================================
+
+function openDetail(r){
+  const st=recStatus(r);
+  const cell=(k,v,m)=>'<div class="detail-cell"><div class="k">'+k+'</div><div class="v '+(m?'mono ':'')+' '+(v?'':'empty-v')+'">'+(v||'não informado')+'</div></div>';
+  
+  const historyHtml = (r.history || []).map(h => `
+    <div class="history-item">
+      <span class="history-date">${fmtDateTime(h.data)} • <b>${esc(h.autor)}</b></span>
+      <span>${esc(h.texto)}</span>
+    </div>
+  `).join('') || '<div style="color:var(--muted);font-size:11px;padding:10px">Nenhuma anotação.</div>';
+
+  openModal(`
+    <div class="modal-head">
+      <h3 class="mono" style="font-size:14px">OS ${esc(r.os||'—')}</h3>
+      <button class="btn btn-ghost btn-sm" id="btnGerarPDF" onclick="gerarPDF('${esc(r.os)}')" style="margin-right:8px">📄 Baixar PDF</button>
+      <button class="modal-close" onclick="closeModal()">✕</button>
+    </div>
+    
+    <div class="modal-body" id="modal-pdf-content" style="background:var(--surface)">
+      <!-- Cabeçalho para o PDF -->
+      <div style="text-align:center;margin-bottom:20px;border-bottom:2px solid var(--primary);padding-bottom:10px">
+        <h2 style="margin:0;color:var(--primary);font-size:18px">Concept Be Safe</h2>
+        <p style="margin:0;font-size:12px;color:var(--muted)">Relatório da Declaração de Blindagem</p>
+      </div>
+
+      <div class="detail-grid">
+        ${cell('Veículo',esc(r.veiculo))}${cell('Blindagem',esc(r.blindagem))}${cell('Cliente',esc(r.cliente))}${cell('Vendedor',esc(r.vendedor))}
+        ${cell('Autorização',fmtDate(r.autorizacao),1)}${cell('Emissão Termo',fmtDate(r.emissaoTermo),1)}${cell('Engenharia Ass.',fmtDate(r.engenhariaAss),1)}${cell('Proc. Ass.',fmtDate(r.procAss),1)}
+        ${cell('Dia Ass.',esc(r.diaAss))}${cell('Envio Sicovab',fmtDate(r.sicovabEnvio),1)}${cell('Prazo Emissão D.B',fmtDate(r.prazoEmissaoDB),1)}${cell('Emissão D.B',fmtDate(r.emissaoDB),1)}
+        ${cell('Dias',r.dias!=null&&r.dias!==''?String(r.dias):'',1)}${cell('Status',st==='emitido'?'Emitida':st==='atrasado'?'Atrasada':'Pendente')}
+      </div>
+      
+      ${r.observacoes?'<div style="margin-top:12px;padding:10px;background:var(--surface2);border-radius:8px;font-size:11px;border:1px solid var(--border)"><b>Obs:</b> '+esc(r.observacoes)+'</div>':''}
+      
+      <!-- Seção de Histórico/Anotações -->
+      <div style="margin-top:20px; border-top: 1px dashed var(--border); padding-top:15px">
+        <h4 style="font-size:12px; margin-bottom:8px; color:var(--primary)">📝 Histórico de Anotações</h4>
+        <div class="history-list">${historyHtml}</div>
+        
+        <div style="display:flex; gap:8px; margin-top:12px">
+          <input type="text" id="notaOS" placeholder="Adicionar uma anotação a esta OS..." style="flex:1; font-size:12px; padding:8px">
+          <button class="btn btn-primary btn-sm" onclick="salvarNota('${esc(r.os)}')">Salvar</button>
+        </div>
+      </div>
+    </div>
+  `,true)
+}
+// =========================================================
+
 function openExcDetail(r){const cell=(k,v,m)=>'<div class="detail-cell"><div class="k">'+k+'</div><div class="v '+(m?'mono ':'')+' '+(v?'':'empty-v')+'">'+(v||'não informado')+'</div></div>';openModal('<div class="modal-head"><h3 class="mono" style="font-size:14px">OS '+esc(r.os||'—')+' — Autorização Pendente</h3><button class="modal-close" onclick="closeModal()">✕</button></div><div class="modal-body"><div class="detail-grid">'+cell('Cliente',esc(r.cliente))+cell('Vendedor',esc(r.vendedor))+cell('Status Exército',esc(r.exercito))+cell('Modelo',esc(r.modelo))+cell('Chassi',esc(r.chassi),1)+cell('Data Coleta',fmtDate(r.dataColeta),1)+cell('Envio Sicovab',fmtDate(r.envioSicovab),1)+cell('Prazo Emissão',fmtDate(r.prazoEmissao),1)+cell('Prazo 9 Dias',fmtDate(r.prazo9dias),1)+cell('Prev. 07 Dias',fmtDate(r.dtaPrev07),1)+cell('Prev. 09 Dias',fmtDate(r.dtaPrev09),1)+cell('Data Emissão',fmtDate(r.dataEmissao),1)+cell('Dias',r.dias!=null&&r.dias!==''?String(r.dias):'',1)+cell('Pedido Compra',esc(r.pedidoCompra))+'</div>'+(r.observacao?'<div style="margin-top:12px;padding:10px;background:var(--surface2);border-radius:8px;font-size:11px"><b>Obs:</b> '+esc(r.observacao)+'</div>':'')+'</div>',true)}
 function openUnifiedDetail(r){const cell=(k,v,m)=>'<div class="detail-cell"><div class="k">'+k+'</div><div class="v '+(m?'mono ':'')+' '+(v?'':'empty-v')+'">'+(v||'não informado')+'</div></div>';let dbsSection='',autSection='';if(r.dbs){dbsSection='<h4 style="margin:16px 0 8px;font-size:13px;color:var(--accent)">📄 Declaração de Blindagem</h4><div class="detail-grid">'+cell('Veículo',esc(r.dbs.veiculo))+cell('Blindagem',esc(r.dbs.blindagem))+cell('Autorização',fmtDate(r.dbs.autorizacao),1)+cell('Emissão Termo',fmtDate(r.dbs.emissaoTermo),1)+cell('Envio Sicovab',fmtDate(r.dbs.sicovabEnvio),1)+cell('Prazo D.B',fmtDate(r.dbs.prazoEmissaoDB),1)+cell('Emissão D.B',fmtDate(r.dbs.emissaoDB),1)+cell('Dias',r.dbs.dias!=null?String(r.dbs.dias):'',1)+'</div>'}if(r.aut){autSection='<h4 style="margin:16px 0 8px;font-size:13px;color:var(--amber)">🛡️ Autorização Pendente</h4><div class="detail-grid">'+cell('Modelo',esc(r.aut.modelo))+cell('Status',esc(r.aut.exercito))+cell('Data Coleta',fmtDate(r.aut.dataColeta),1)+cell('Envio Sicovab',fmtDate(r.aut.envioSicovab),1)+cell('Prazo Emissão',fmtDate(r.aut.prazoEmissao),1)+cell('Data Emissão',fmtDate(r.aut.dataEmissao),1)+cell('Dias',r.aut.dias!=null?String(r.aut.dias):'',1)+cell('Pedido',esc(r.aut.pedidoCompra))+'</div>'}openModal('<div class="modal-head"><h3 class="mono" style="font-size:14px">OS '+esc(r.os)+' — Visão Completa</h3><button class="modal-close" onclick="closeModal()">✕</button></div><div class="modal-body"><div class="detail-grid">'+cell('Cliente',esc(r.cliente))+cell('Vendedor',esc(r.vendedor))+'</div>'+dbsSection+autSection+'</div>',true,'wide')}
 
@@ -1694,9 +1806,6 @@ async function init(){
   pullFromCloud(true);
 
   iniciarTempoReal();
-  
-  // Polling removido para não bugar os gráficos. O WebSocket já mantém tudo em tempo real.
-  // O pullFromCloud só será executado ao clicar em "Sincronizar" ou ao logar.
   
   window.addEventListener('focus',()=>{if(getCloudBaseUrl())pullFromCloud(true)});
 }
