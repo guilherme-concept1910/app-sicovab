@@ -1,0 +1,1706 @@
+<!DOCTYPE html>
+<html lang="pt-BR" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0">
+<title>Concept Be Safe • Controle de D.Bs</title>
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<script id="cbs-embedded-data" type="application/json">null</script>
+<style>
+:root{--bg:#eef2f7;--surface:#fff;--surface2:#f6f8fb;--border:#dde4ee;--text:#0f172a;--text2:#47566e;--muted:#8b98ad;--primary:#1e40af;--primary2:#16337f;--accent:#3b82f6;--accent-soft:#e7effd;--green:#059669;--green-soft:#e3f6ef;--amber:#c47f17;--amber-soft:#fdf3e1;--red:#dc2626;--red-soft:#fdeaea;--purple:#7c3aed;--purple-soft:#f0eafc;--teal:#0d9488;--teal-soft:#e6f7f5;--sidebar:#0c1b3f;--sidebar2:#12244f;--sidebar-text:#c9d4ec;--shadow:0 1px 3px rgba(15,23,42,.07),0 8px 24px rgba(15,23,42,.05);--shadow-lg:0 10px 40px rgba(15,23,42,.14);--radius:12px}
+[data-theme="dark"]{--bg:#0a1120;--surface:#121b2e;--surface2:#182338;--border:#243250;--text:#e8eef8;--text2:#aab8d2;--muted:#66769a;--accent-soft:#16264a;--green-soft:#0d2b22;--amber-soft:#2c2107;--red-soft:#331316;--purple-soft:#241442;--teal-soft:#0d2b29;--sidebar:#081226;--sidebar2:#0e1c3a;--sidebar-text:#b9c6e2}
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{overflow-x:hidden;width:100%}
+body{font-family:'Sora',sans-serif;background:var(--bg);color:var(--text);font-size:14px}
+.mono{font-family:'JetBrains Mono',monospace}button{font-family:inherit;cursor:pointer;border:none;background:none;color:inherit}
+input,select,textarea{font-family:inherit;font-size:13px;color:var(--text);background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:8px 11px;outline:none;width:100%}
+input:focus,select:focus,textarea:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(59,130,246,.15)}
+.hidden{display:none!important}
+.login-wrap{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:16px;background:linear-gradient(135deg,#0c1b3f 0%,#1e3a8a 50%,#0c1b3f 100%)}
+.login-card{width:100%;max-width:400px;background:rgba(15,26,54,.9);backdrop-filter:blur(14px);border:1px solid rgba(120,150,220,.2);border-radius:20px;padding:42px 36px;color:#e8eef8}
+.login-logo{display:flex;align-items:center;gap:13px;margin-bottom:28px}
+.logo-badge{width:52px;height:52px;border-radius:14px;display:grid;place-items:center;background:linear-gradient(135deg,#2563eb,#1e40af);flex-shrink:0}
+.login-card h2{font-size:20px;margin-bottom:4px}.login-card .sub{color:#9db0d6;font-size:12px;margin-bottom:24px}
+.field{margin-bottom:14px}.field label{display:block;font-size:11px;font-weight:600;color:#aebfdd;margin-bottom:5px;text-transform:uppercase;letter-spacing:.04em}
+.pass-wrap{position:relative;display:flex;align-items:center}
+.pass-wrap input{padding-right:38px}
+.pass-toggle{position:absolute;right:8px;width:28px;height:28px;border-radius:6px;display:grid;place-items:center;color:#9db0d6;font-size:13px}
+.login-card input{background:rgba(8,15,33,.7);border:1px solid rgba(120,150,220,.25);color:#e8eef8}
+.btn-login{width:100%;margin-top:8px;padding:12px;border-radius:10px;background:linear-gradient(135deg,#2563eb,#1d4ed8);color:#fff;font-weight:700;font-size:14px}
+.btn-login:hover{transform:translateY(-1px);box-shadow:0 10px 24px rgba(37,99,235,.4)}
+.btn-login:disabled{opacity:.5;cursor:not-allowed;transform:none;box-shadow:none}
+.login-error{margin-top:12px;padding:10px;border-radius:8px;background:rgba(220,38,38,.15);border:1px solid rgba(220,38,38,.35);color:#fca5a5;font-size:12px;display:none}
+.login-sec-foot{margin-top:18px;padding-top:12px;border-top:1px solid rgba(120,150,220,.15);display:flex;align-items:center;justify-content:center;gap:6px;font-size:10.5px;color:#8ba0c9;text-align:center}
+.app{display:flex;min-height:100vh;width:100%}
+.sidebar-backdrop{display:none;position:fixed;inset:0;background:rgba(8,15,32,.65);backdrop-filter:blur(2px);z-index:90}
+.sidebar{width:232px;background:var(--sidebar);color:var(--sidebar-text);display:flex;flex-direction:column;position:fixed;top:0;bottom:0;left:0;z-index:95;transition:transform .25s ease}
+.brand{display:flex;align-items:center;gap:11px;padding:18px 16px;border-bottom:1px solid rgba(255,255,255,.07)}
+.brand h1{font-size:14px;font-weight:800;color:#fff}.brand p{font-size:9px;color:#8ba0c9;text-transform:uppercase}
+.sidebar-close-btn{display:none;margin-left:auto;width:30px;height:30px;border-radius:8px;color:#8ba0c9;place-items:center;font-size:16px}
+nav{padding:14px 10px;flex:1;display:flex;flex-direction:column;gap:2px;overflow-y:auto}
+.nav-item{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:9px;font-size:13px;font-weight:600;color:var(--sidebar-text);width:100%;text-align:left}
+.nav-item:hover{background:var(--sidebar2);color:#fff}
+.nav-item.active{background:linear-gradient(90deg,rgba(59,130,246,.22),rgba(59,130,246,.06));color:#fff;box-shadow:inset 2.5px 0 0 #3b82f6}
+.nav-item svg{width:17px;height:17px;opacity:.8;flex-shrink:0}
+.sidebar-foot{padding:12px 10px;border-top:1px solid rgba(255,255,255,.07)}
+.main{flex:1;margin-left:232px;display:flex;flex-direction:column;min-width:0;width:calc(100% - 232px)}
+.topbar{min-height:58px;background:var(--surface);border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px;padding:8px 20px;position:sticky;top:0;z-index:40;flex-wrap:wrap}
+.menu-toggle-btn{display:none;width:36px;height:36px;border-radius:9px;border:1px solid var(--border);background:var(--surface2);color:var(--text);place-items:center;flex-shrink:0}
+.menu-toggle-btn svg{width:18px;height:18px}
+.topbar h2{font-size:16px;font-weight:700;line-height:1.2}.topbar .crumb{font-size:11px;color:var(--muted)}
+.topbar-right{margin-left:auto;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.user-chip{display:flex;align-items:center;gap:8px;padding:4px 8px 4px 4px;border-radius:10px;background:var(--surface2);border:1px solid var(--border)}
+.avatar{width:28px;height:28px;border-radius:7px;display:grid;place-items:center;font-weight:700;font-size:11px;color:#fff;background:linear-gradient(135deg,#3b82f6,#1e40af);flex-shrink:0}
+.user-chip .nm{font-size:11px;font-weight:600;max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.user-chip .rl{font-size:9px;color:var(--muted);text-transform:uppercase}
+.content{padding:20px;max-width:1600px;width:100%;margin:0 auto}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow)}
+.kpi-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(195px,1fr));gap:12px;margin-bottom:16px}
+.kpi{padding:15px 16px;position:relative;display:flex;flex-direction:column;justify-content:space-between;min-width:0}
+.kpi .lbl{font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);padding-right:40px}
+.kpi .val{font-size:26px;font-weight:800;font-family:'JetBrains Mono',monospace;margin:5px 0 3px}
+.kpi .hint{font-size:11px;color:var(--text2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.kpi-ico{position:absolute;right:12px;top:12px;width:36px;height:36px;border-radius:9px;display:grid;place-items:center}
+.chart-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px;margin-bottom:16px}
+.chart-card{padding:16px;min-width:0}.chart-card h4{font-size:13px;font-weight:700;margin-bottom:2px}.chart-card .ch-sub{font-size:11px;color:var(--muted);margin-bottom:12px}
+.chart-box{position:relative;height:225px;width:100%}
+.toolbar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:12px}
+.search-box{position:relative;flex:1;min-width:180px;max-width:320px}
+.search-box svg{position:absolute;left:10px;top:50%;transform:translateY(-50%);width:14px;height:14px;color:var(--muted)}
+.search-box input{padding-left:32px}
+.toolbar select{width:auto;min-width:120px}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;padding:8px 14px;border-radius:9px;font-size:12px;font-weight:600;border:1px solid transparent;white-space:nowrap}
+.btn svg{width:15px;height:15px;flex-shrink:0}
+.btn-primary{background:var(--primary);color:#fff}.btn-primary:hover{background:var(--primary2)}
+.btn-ghost{background:var(--surface);border-color:var(--border);color:var(--text2)}.btn-ghost:hover{background:var(--surface2)}
+.btn-danger{background:var(--red);color:#fff}
+.btn-success{background:var(--green);color:#fff}.btn-success:hover{opacity:.92}
+.btn-sm{padding:5px 9px;font-size:11px;border-radius:7px}
+.table-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch;width:100%}
+table{width:100%;border-collapse:collapse;min-width:1200px}
+thead th{background:var(--surface2);font-size:9.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);text-align:left;padding:9px 8px;border-bottom:1px solid var(--border);cursor:pointer;white-space:nowrap}
+tbody td{padding:8px;border-bottom:1px solid var(--border);font-size:11px;white-space:nowrap}
+tbody tr:hover{background:var(--surface2)}tbody tr{cursor:pointer}
+td.os{font-family:'JetBrains Mono',monospace;font-weight:600;color:var(--primary);font-size:10.5px}
+.badge{display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:99px;font-size:10px;font-weight:700;white-space:nowrap}
+.badge .dot{width:5px;height:5px;border-radius:50%}
+.badge.emitido{background:var(--green-soft);color:var(--green)}.badge.emitido .dot{background:var(--green)}
+.badge.pendente{background:var(--amber-soft);color:var(--amber)}.badge.pendente .dot{background:var(--amber)}
+.badge.atrasado{background:var(--red-soft);color:var(--red)}.badge.atrasado .dot{background:var(--red)}
+.badge.autpendente{background:var(--amber-soft);color:var(--amber)}.badge.autpendente .dot{background:var(--amber)}
+.vend-pill{display:inline-flex;align-items:center;gap:5px;font-size:10.5px;font-weight:600;color:var(--text2)}
+.vend-dot{width:20px;height:20px;border-radius:5px;display:grid;place-items:center;font-size:8px;font-weight:700;color:#fff;flex-shrink:0}
+.pagination{display:flex;align-items:center;justify-content:space-between;padding:12px 14px;flex-wrap:wrap;gap:8px}
+.pg-info{font-size:11px;color:var(--muted)}.pg-btns{display:flex;gap:4px;flex-wrap:wrap}
+.pg-btn{min-width:28px;height:28px;padding:0 6px;border-radius:7px;display:grid;place-items:center;font-size:11px;font-weight:600;border:1px solid var(--border);background:var(--surface);color:var(--text2)}
+.pg-btn.active{background:var(--primary);color:#fff;border-color:var(--primary)}
+.modal-overlay{position:fixed;inset:0;background:rgba(8,15,32,.62);backdrop-filter:blur(3px);z-index:110;display:flex;align-items:center;justify-content:center;padding:16px}
+.modal-box{background:var(--surface);border-radius:16px;box-shadow:var(--shadow-lg);width:100%;max-width:700px;max-height:90vh;display:flex;flex-direction:column;overflow:hidden}
+.modal-box.wide{max-width:900px}.modal-box.narrow{max-width:480px}
+.modal-head{display:flex;align-items:center;gap:12px;padding:14px 18px;border-bottom:1px solid var(--border)}
+.modal-head h3{font-size:14px;font-weight:700;flex:1}
+.modal-close{width:30px;height:30px;border-radius:8px;display:grid;place-items:center;color:var(--muted);flex-shrink:0}
+.modal-close:hover{background:var(--surface2)}
+.modal-body{padding:18px;overflow-y:auto;-webkit-overflow-scrolling:touch}
+.modal-foot{padding:12px 18px;border-top:1px solid var(--border);display:flex;justify-content:flex-end;gap:8px;flex-wrap:wrap}
+.detail-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:1px;background:var(--border);border:1px solid var(--border);border-radius:10px;overflow:hidden}
+.detail-cell{background:var(--surface);padding:10px 12px;min-width:0}
+.detail-cell .k{font-size:9px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--muted);margin-bottom:2px}
+.detail-cell .v{font-size:12px;font-weight:500;word-break:break-word}
+.detail-cell .v.empty-v{color:var(--muted);font-style:italic;font-weight:400}
+.import-zone{border:2px dashed var(--border);border-radius:14px;padding:32px 16px;text-align:center;background:var(--surface2);min-height:200px;display:flex;flex-direction:column;align-items:center;justify-content:center}
+.import-zone.drag{border-color:var(--accent);background:var(--accent-soft)}
+.import-zone svg{width:40px;height:40px;color:var(--accent);margin-bottom:10px}
+.import-modes{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:8px;margin:14px 0}
+.mode-card{border:1.5px solid var(--border);border-radius:10px;padding:12px;cursor:pointer;background:var(--surface)}
+.mode-card.sel{border-color:var(--accent);background:var(--accent-soft)}
+.mode-card h5{font-size:12px;font-weight:700;margin-bottom:2px}
+.mode-card p{font-size:10px;color:var(--muted);line-height:1.4}
+.toast{position:fixed;bottom:20px;right:20px;z-index:200;padding:12px 16px;border-radius:10px;background:var(--surface);border:1px solid var(--border);box-shadow:var(--shadow-lg);font-size:12px;font-weight:600;display:flex;align-items:center;gap:8px;max-width:360px}
+.toast .t-ico{width:24px;height:24px;border-radius:7px;display:grid;place-items:center;flex-shrink:0}
+.toast.ok .t-ico{background:var(--green-soft);color:var(--green)}
+.toast.err .t-ico{background:var(--red-soft);color:var(--red)}
+.section-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:14px;flex-wrap:wrap}
+.section-head h3{font-size:14px;font-weight:700}.section-head p{font-size:11px;color:var(--muted)}
+.fg{margin-bottom:12px}.fg label{display:block;font-size:10px;font-weight:600;color:var(--text2);margin-bottom:4px}
+.role-badge{padding:2px 8px;border-radius:99px;font-size:9px;font-weight:700;text-transform:uppercase}
+.role-badge.admin{background:var(--accent-soft);color:var(--accent)}
+.role-badge.gerente{background:var(--green-soft);color:var(--green)}
+.role-badge.vendedor{background:var(--surface2);color:var(--text2);border:1px solid var(--border)}
+.team-list{display:flex;flex-wrap:wrap;gap:4px;margin-top:4px}
+.team-tag{display:inline-flex;align-items:center;gap:3px;padding:2px 6px;border-radius:5px;background:var(--surface2);border:1px solid var(--border);font-size:9px;font-weight:600}
+.team-check{display:flex;align-items:center;gap:6px;padding:5px 8px;border-radius:6px;border:1px solid var(--border);margin-bottom:3px;cursor:pointer;font-size:11px}
+.team-check:hover{background:var(--surface2)}
+.team-check input{width:auto}
+.update-bar{display:flex;align-items:center;gap:8px;padding:8px 14px;background:var(--accent-soft);border:1px solid var(--accent);border-radius:9px;font-size:11px;font-weight:600;color:var(--primary);margin-bottom:14px;flex-wrap:wrap}
+.update-bar svg{width:14px;height:14px;flex-shrink:0}
+.update-bar .sep{opacity:.3}
+.import-tabs{display:flex;gap:4px;margin-bottom:14px;border-bottom:1px solid var(--border);flex-wrap:wrap}
+.import-tab{padding:10px 14px;font-size:11.5px;font-weight:600;cursor:pointer;border-bottom:2px solid transparent;color:var(--muted)}
+.import-tab.active{color:var(--primary);border-bottom-color:var(--primary)}
+.import-tab:hover{background:var(--surface2)}
+.security-notice{background:var(--green-soft);border:1px solid var(--green);color:var(--green);padding:10px 14px;border-radius:8px;font-size:11px;margin-bottom:14px;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.security-notice svg{width:16px;height:16px;flex-shrink:0}
+.saved-sheet-box{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 16px;border-radius:10px;background:var(--surface2);border:1px solid var(--border);margin-bottom:14px;flex-wrap:wrap}
+.saved-sheet-info h5{font-size:12px;font-weight:700;margin-bottom:2px}
+.saved-sheet-info p{font-size:11px;color:var(--muted)}
+.unified-timeline{padding:10px;background:var(--surface2);border-radius:8px;margin-top:8px}
+.timeline-item{display:flex;gap:10px;padding:5px 0;border-bottom:1px solid var(--border);align-items:center}
+.timeline-item:last-child{border-bottom:none}
+.timeline-date{font-size:10px;color:var(--muted);min-width:70px;font-family:'JetBrains Mono',monospace}
+.timeline-event{font-size:11px;flex:1}
+.timeline-source{font-size:9px;padding:2px 6px;border-radius:4px;font-weight:600}
+.timeline-source.dbs{background:var(--accent-soft);color:var(--accent)}
+.timeline-source.aut{background:var(--amber-soft);color:var(--amber)}
+.date-tags-filter{display:flex;flex-direction:column;gap:6px;min-width:220px}
+.date-tags-input{display:flex;gap:6px;align-items:center}
+.date-tags-input input[type=date]{flex:1;min-width:0}
+.date-tags-input button{padding:6px 10px;border-radius:7px;background:var(--primary);color:#fff;font-size:11px;font-weight:600;white-space:nowrap;border:none;cursor:pointer}
+.date-tags-input button:hover{background:var(--primary2)}
+.date-tags-list{display:flex;flex-wrap:wrap;gap:4px;min-height:24px}
+.date-tag{display:inline-flex;align-items:center;gap:4px;padding:3px 8px;border-radius:99px;background:var(--accent-soft);color:var(--primary);font-size:10.5px;font-weight:600;font-family:'JetBrains Mono',monospace}
+.date-tag .rm{cursor:pointer;font-weight:700;opacity:.7;padding:0 2px;border-radius:3px}
+.date-tag .rm:hover{opacity:1;background:rgba(30,64,175,.1)}
+.date-tags-hint{font-size:10px;color:var(--muted)}
+.temporal-bar{display:flex;flex-wrap:wrap;align-items:flex-end;gap:8px;padding:10px 12px;background:var(--surface2);border:1px solid var(--border);border-radius:10px;margin-bottom:14px}
+.temporal-group{display:flex;flex-direction:column;gap:3px;min-width:0}
+.temporal-group label{font-size:9.5px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--muted)}
+.temporal-group select,.temporal-group input[type=date]{width:auto;min-width:115px;padding:6px 9px;font-size:12px;height:32px}
+.temporal-period{display:flex;align-items:center;gap:5px;width:100%}
+.temporal-period span{font-size:10px;color:var(--muted);font-weight:600;flex-shrink:0}
+.pipeline-card{padding:16px;margin-bottom:16px}
+.pipeline-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;flex-wrap:wrap;gap:8px}
+.pipeline-head h4{font-size:13px;font-weight:700}
+.pipeline-head span{font-size:11px;color:var(--muted)}
+.pipeline-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(155px,1fr));gap:10px}
+.pipe-step{background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:11px 12px;min-width:0}
+.pipe-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;gap:4px}
+.pipe-top .st-name{font-size:10.5px;font-weight:700;color:var(--text2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pipe-top .st-pct{font-size:10px;font-weight:700;font-family:'JetBrains Mono',monospace;color:var(--primary);flex-shrink:0}
+.pipe-val{font-size:20px;font-weight:800;font-family:'JetBrains Mono',monospace;margin-bottom:6px}
+.pipe-bar{height:5px;background:var(--border);border-radius:99px;overflow:hidden}
+.pipe-fill{height:100%;border-radius:99px;transition:width .3s ease}
+.pipe-sub{font-size:9.5px;color:var(--muted);margin-top:5px}
+.dash-bottom-grid{display:grid;grid-template-columns:1.15fr 1fr;gap:12px;margin-bottom:16px}
+.mini-table-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch;max-height:320px;overflow-y:auto}
+.mini-table{width:100%;border-collapse:collapse;min-width:520px}
+.mini-table thead th{position:sticky;top:0;z-index:2;background:var(--surface2);font-size:9px;padding:8px 8px}
+.mini-table tbody td{padding:7px 8px;font-size:11px;border-bottom:1px solid var(--border)}
+.pbar-inline{display:inline-flex;align-items:center;gap:6px;width:100%}
+.pbar-track{flex:1;height:6px;background:var(--border);border-radius:99px;overflow:hidden;min-width:45px}
+.pbar-fill{height:100%;background:var(--green);border-radius:99px}
+.mobile-bottom-nav{display:none;position:fixed;bottom:0;left:0;right:0;height:60px;background:var(--surface);border-top:1px solid var(--border);z-index:80;grid-template-columns:repeat(5,1fr);padding:4px 6px;box-shadow:0 -4px 20px rgba(15,23,42,.08)}
+.mob-nav-btn{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;font-size:9.5px;font-weight:600;color:var(--muted);border-radius:8px;padding:4px 2px}
+.mob-nav-btn svg{width:18px;height:18px}
+.mob-nav-btn.active{color:var(--primary);background:var(--accent-soft)}
+@media(max-width:1100px){.dash-bottom-grid{grid-template-columns:1fr}}
+@media(max-width:960px){
+.sidebar{transform:translateX(-100%);width:260px;box-shadow:var(--shadow-lg)}
+.sidebar.open{transform:translateX(0)}
+.sidebar-backdrop.open{display:block}
+.sidebar-close-btn{display:grid}
+.main{margin-left:0;width:100%;padding-bottom:72px}
+.menu-toggle-btn{display:grid}
+.mobile-bottom-nav{display:grid}
+.chart-grid{grid-template-columns:1fr}
+.detail-grid{grid-template-columns:repeat(2,1fr)}
+.topbar{padding:8px 12px}
+.content{padding:12px}
+.toast{bottom:72px;left:12px;right:12px;max-width:none}
+}
+@media(max-width:640px){
+.login-card{padding:28px 22px;border-radius:16px}
+input,select,textarea{font-size:16px}
+.topbar h2{font-size:14px}
+.topbar .crumb{display:none}
+.topbar-right{gap:5px}
+.topbar-right .btn-sm{padding:5px 7px;font-size:10px}
+.user-chip .nm{max-width:85px}
+.update-bar{font-size:10px;padding:7px 10px;gap:5px}
+.kpi-grid{grid-template-columns:repeat(2,1fr);gap:8px}
+.kpi{padding:12px}
+.kpi .val{font-size:20px}
+.kpi .lbl{font-size:9px;padding-right:28px}
+.kpi .hint{font-size:9.5px}
+.kpi-ico{width:28px;height:28px;right:8px;top:8px}
+.kpi-ico svg{width:14px;height:14px}
+.pipeline-grid{grid-template-columns:repeat(2,1fr);gap:8px}
+.pipe-val{font-size:17px}
+.temporal-bar{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;padding:10px}
+.temporal-group{width:100%}
+.temporal-group select,.temporal-group input[type=date]{width:100%;min-width:0;height:36px;font-size:12px}
+.temporal-group.full-mob{grid-column:1/-1}
+.temporal-period input[type=date]{flex:1;min-width:0}
+.temporal-bar .btn{grid-column:1/-1;width:100%;height:36px!important}
+.toolbar{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.toolbar .search-box{grid-column:1/-1;max-width:none;width:100%}
+.toolbar select,.toolbar .btn{width:100%;min-width:0;height:36px}
+.date-tags-filter{grid-column:1/-1;width:100%;min-width:0}
+.section-head{flex-direction:column;align-items:stretch;gap:8px}
+.section-head > div:last-child{display:flex;flex-wrap:wrap;gap:6px}
+.section-head .btn{flex:1}
+.detail-grid{grid-template-columns:1fr 1fr}
+.modal-overlay{padding:10px}
+.modal-box{max-height:92vh;border-radius:14px}
+.modal-head{padding:12px 14px}
+.modal-body{padding:14px}
+.modal-foot{padding:10px 14px}
+.chart-box{height:200px}
+}
+@media(max-width:380px){
+.kpi-grid,.pipeline-grid,.detail-grid,.temporal-bar,.toolbar{grid-template-columns:1fr}
+.btn-lbl-Desk{display:none}
+}
+</style>
+<base target="_blank">
+</head>
+<body>
+<div id="loginView" class="login-wrap">
+<div class="login-card">
+<div class="login-logo">
+<div class="logo-badge"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="m9 12 2 2 4-4"/></svg></div>
+<div><h1 style="font-size:16px">Concept Be Safe</h1><p style="font-size:10px;color:#9db0d6">Controle de Declarações de Blindagem</p></div>
+</div>
+<h2>Acesso Restrito</h2>
+<p class="sub">Autenticação obrigatória • Entre com e-mail e senha</p>
+<form id="loginForm" onsubmit="return false;" autocomplete="on">
+<div class="field">
+  <label>E-mail Corporativo</label>
+  <input type="email" id="loginEmail" placeholder="admin@conceptbesafe.com.br" autocomplete="username" inputmode="email" autocapitalize="none" autocorrect="off" spellcheck="false" enterkeyhint="next" required>
+</div>
+<div class="field">
+  <label>Senha de Acesso</label>
+  <div class="pass-wrap">
+    <input type="password" id="loginPass" placeholder="••••••••" autocomplete="current-password" autocapitalize="none" autocorrect="off" spellcheck="false" enterkeyhint="go" required>
+    <button type="button" class="pass-toggle" onclick="togglePassVis('loginPass')" title="Mostrar/ocultar senha">👁</button>
+  </div>
+</div>
+<button type="button" class="btn-login" id="btnLogin">Entrar com Segurança</button>
+<div id="loginError" class="login-error"></div>
+</form>
+<div class="login-sec-foot">
+<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+<span>Ambiente Criptografado • Sincronizado em Tempo Real</span>
+</div>
+</div>
+</div>
+<div id="appView" class="app hidden">
+<div class="sidebar-backdrop" id="sidebarBackdrop"></div>
+<aside class="sidebar" id="sidebar">
+<div class="brand">
+<div class="logo-badge" style="width:40px;height:40px;border-radius:11px"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="m9 12 2 2 4-4"/></svg></div>
+<div><h1>Concept Be Safe</h1><p>Sicovab • D.Bs</p></div>
+<button class="sidebar-close-btn" id="btnCloseSidebar" title="Fechar menu">✕</button>
+</div>
+<nav>
+<button class="nav-item active" data-view="dashboard"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="9" rx="1"/><rect x="14" y="3" width="7" height="5" rx="1"/><rect x="14" y="12" width="7" height="9" rx="1"/><rect x="3" y="16" width="7" height="5" rx="1"/></svg>Dashboard</button>
+<button class="nav-item" data-view="unified"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></svg>Visão Unificada</button>
+<button class="nav-item" data-view="records"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/></svg>Declarações D.Bs</button>
+<button class="nav-item" data-view="exercicio"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 12l2 2 4-4"/><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>Autorização Pendente</button>
+<button class="nav-item admin-only" data-view="import"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12"/></svg>Importar planilhas</button>
+<button class="nav-item admin-only" data-view="users"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>Usuários & Equipes</button>
+</nav>
+<div class="sidebar-foot">
+<button class="nav-item" id="changePassBtn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>Alterar senha</button>
+<button class="nav-item" id="themeBtn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg><span id="themeLabel">Modo escuro</span></button>
+<button class="nav-item" id="logoutBtn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"/></svg>Sair</button>
+</div>
+</aside>
+<div class="main">
+<header class="topbar">
+<button class="menu-toggle-btn" id="btnOpenSidebar" title="Abrir menu">
+<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M3 6h18M3 12h18M3 18h18"/></svg>
+</button>
+<div><h2 id="viewTitle">Dashboard</h2><div class="crumb" id="viewCrumb">Visão geral</div></div>
+<div class="topbar-right">
+<button class="btn btn-ghost btn-sm" id="btnForceSync" title="Sincronizar dados com a nuvem agora">🔄 <span class="btn-lbl-Desk">Sincronizar</span></button>
+<button class="btn btn-ghost btn-sm" id="btnTestCloud" title="Testar conexão com o Firebase">🧪 <span class="btn-lbl-Desk">Testar</span></button>
+<button class="btn btn-ghost btn-sm admin-only" id="btnCloudConfig" title="Configurar banco em nuvem privado com Chave Secreta">🔐 <span class="btn-lbl-Desk">Cofre Nuvem</span></button>
+<button class="btn btn-primary btn-sm admin-only" id="btnExportOnlineHTML" title="Baixa o arquivo index.html com as planilhas e senhas criptografadas dentro dele">🌐 <span class="btn-lbl-Desk">Baixar HTML</span></button>
+<div class="user-chip"><div class="avatar" id="userAvatar">A</div><div><div class="nm" id="userName"></div><div class="rl" id="userRole"></div></div></div>
+</div>
+</header>
+<main class="content">
+<div class="update-bar" id="updateBar">
+<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
+<span>Último Upload D.Bs: <b id="updDbs">—</b></span>
+<span class="sep">•</span>
+<span>Último Upload Autorizações: <b id="updAut">—</b></span>
+<span class="sep">•</span>
+<span id="storageBadge" style="color:var(--green)">🔒 Cofre Criptografado Ativo</span>
+</div>
+<section id="view-dashboard">
+<div class="temporal-bar">
+<div class="temporal-group"><label>Vendedor</label><select id="fDashVend"><option value="">Vendedor: todos</option></select></div>
+<div class="temporal-group"><label>Status D.B</label><select id="fDashStatus"><option value="">Status: todos</option><option value="emitido">Emitidas</option><option value="pendente">Pendentes (No Prazo)</option><option value="atrasado">Atrasadas</option></select></div>
+<div class="temporal-group"><label>Campo de Data</label><select id="fDashDateField"><option value="">Qualquer data</option><option value="emissaoDB">Emissão D.B</option><option value="prazoEmissaoDB">Prazo D.B</option><option value="sicovabEnvio">Envio Sicovab</option><option value="autorizacao">Autorização</option><option value="emissaoTermo">Emissão Termo</option></select></div>
+<div class="temporal-group"><label>Data Específica</label><input type="date" id="fDashDate"></div>
+<div class="temporal-group"><label>Mês</label><select id="fDashMonth"><option value="">Mês: todos</option><option value="01">Janeiro</option><option value="02">Fevereiro</option><option value="03">Março</option><option value="04">Abril</option><option value="05">Maio</option><option value="06">Junho</option><option value="07">Julho</option><option value="08">Agosto</option><option value="09">Setembro</option><option value="10">Outubro</option><option value="11">Novembro</option><option value="12">Dezembro</option></select></div>
+<div class="temporal-group"><label>Ano</label><select id="fDashYear" class="year-select"><option value="">Ano: todos</option></select></div>
+<div class="temporal-group full-mob"><label>Período (De — Até)</label><div class="temporal-period"><input type="date" id="fDashFrom" title="Data inicial"><span>até</span><input type="date" id="fDashTo" title="Data final"></div></div>
+<button class="btn btn-ghost btn-sm" id="btnDashClear" style="height:32px">Limpar filtros</button>
+</div>
+<div class="kpi-grid">
+<div class="card kpi"><div class="kpi-ico" style="background:var(--accent-soft);color:var(--accent)"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg></div><span class="lbl">Total de D.Bs</span><span class="val" id="kTotal">0</span><span class="hint" id="kTotalHint">registros filtrados</span></div>
+<div class="card kpi"><div class="kpi-ico" style="background:var(--green-soft);color:var(--green)"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.1V12a10 10 0 1 1-5.9-9.1"/><path d="m9 11 3 3L22 4"/></svg></div><span class="lbl">Emitidas</span><span class="val" id="kEmitidas">0</span><span class="hint" id="kEmitHint">—</span></div>
+<div class="card kpi"><div class="kpi-ico" style="background:var(--amber-soft);color:var(--amber)"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg></div><span class="lbl">Pendentes</span><span class="val" id="kPend">0</span><span class="hint" id="kPendHint">aguardando emissão</span></div>
+<div class="card kpi"><div class="kpi-ico" style="background:var(--red-soft);color:var(--red)"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><path d="M12 9v4M12 17h.01"/></svg></div><span class="lbl">D.Bs em Atraso</span><span class="val" id="kAtrasadas" style="color:var(--red)">0</span><span class="hint" id="kAtrasadasHint">prazo D.B vencido</span></div>
+<div class="card kpi"><div class="kpi-ico" style="background:var(--amber-soft);color:var(--amber)"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg></div><span class="lbl">Vencendo (7 dias)</span><span class="val" id="kVencendo">0</span><span class="hint" id="kVencendoHint">prazos nos próx. 7 dias</span></div>
+<div class="card kpi"><div class="kpi-ico" style="background:var(--teal-soft);color:var(--teal)"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg></div><span class="lbl">Taxa de Conclusão</span><span class="val" id="kTaxa">0%</span><span class="hint" id="kTaxaHint">SLA dentro do prazo: —</span></div>
+<div class="card kpi"><div class="kpi-ico" style="background:var(--purple-soft);color:var(--purple)"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M13 2 3 14h9l-1 8 10-12h-9l1-8z"/></svg></div><span class="lbl">Tempo Médio (Mês)</span><span class="val" id="kTempo">0</span><span class="hint" id="kTempoMesHint">dias no mês atual</span></div>
+<div class="card kpi"><div class="kpi-ico" style="background:var(--accent-soft);color:var(--primary)"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg></div><span class="lbl">Tempo Médio (Geral)</span><span class="val" id="kTempoGeral">0</span><span class="hint" id="kTempoGeralHint">mín: — / máx: — dias</span></div>
+<div class="card kpi"><div class="kpi-ico" style="background:var(--amber-soft);color:var(--amber)"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M12 18v-6M9 15l3 3 3-3"/></svg></div><span class="lbl">Aguard. Sicovab</span><span class="val" id="kSemSicovab">0</span><span class="hint" id="kSemSicovabHint">em fase de termo/assinaturas</span></div>
+<div class="card kpi"><div class="kpi-ico" style="background:var(--red-soft);color:var(--red)"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="M12 8v4M12 16h.01"/></svg></div><span class="lbl">Aut. Pendentes</span><span class="val" id="kExcPend">0</span><span class="hint" id="kExcHint">processos no exército</span></div>
+</div>
+<div class="card pipeline-card">
+<div class="pipeline-head"><div><h4>Esteira Operacional de Documentação (Funil de Etapas D.Bs)</h4><span>Acompanhamento de avanço por etapa sobre o total de D.Bs filtradas</span></div><span id="pipeSummaryBadge" class="badge emitido"><span class="dot"></span>Fluxo Sicovab</span></div>
+<div class="pipeline-grid" id="dashPipeline"></div>
+</div>
+<div class="chart-grid">
+<div class="card chart-card"><h4>Volume & Status por Vendedor</h4><div class="ch-sub">Emitidas vs Pendentes vs Atrasadas por responsável</div><div class="chart-box" id="boxVend"><canvas id="chVend"></canvas></div></div>
+<div class="card chart-card"><h4>Termômetro de Status das D.Bs</h4><div class="ch-sub">Proporção de Emitidas, Pendentes no Prazo e Atrasadas</div><div class="chart-box" id="boxStatus"><canvas id="chStatus"></canvas></div></div>
+<div class="card chart-card"><h4>Emissões ao longo do tempo</h4><div class="ch-sub">Evolução mensal de D.Bs emitidas vs enviadas ao Sicovab</div><div class="chart-box" id="boxMes"><canvas id="chMes"></canvas></div></div>
+<div class="card chart-card"><h4>Curva de SLA — Tempo de Emissão (Dias)</h4><div class="ch-sub">Distribuição de velocidade de emissão das D.Bs concluídas</div><div class="chart-box" id="boxLeadTime"><canvas id="chLeadTime"></canvas></div></div>
+<div class="card chart-card"><h4>Distribuição por Blindagem</h4><div class="ch-sub">Especificações de blindagem mais utilizadas</div><div class="chart-box" id="boxBlind"><canvas id="chBlind"></canvas></div></div>
+<div class="card chart-card"><h4>Top Modelos de Veículos</h4><div class="ch-sub">Veículos com maior volume de declarações</div><div class="chart-box" id="boxModelos"><canvas id="chModelos"></canvas></div></div>
+<div class="card chart-card"><h4>Top Clientes</h4><div class="ch-sub">Clientes com mais declarações registradas</div><div class="chart-box" id="boxCli"><canvas id="chCli"></canvas></div></div>
+<div class="card chart-card"><h4>Autorizações Pendentes — Status Exército</h4><div class="ch-sub">Gargalos atuais na fila de Autorizações do Exército</div><div class="chart-box" id="boxExcStatus"><canvas id="chExcStatus"></canvas></div></div>
+</div>
+<div class="dash-bottom-grid">
+<div class="card chart-card">
+<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px"><div><h4>Performance Consolidada por Vendedor</h4><div class="ch-sub" style="margin-bottom:0">Taxa de conclusão, atrasos, SLA médio e fila no Exército</div></div></div>
+<div class="mini-table-wrap"><table class="mini-table"><thead><tr><th>Vendedor</th><th style="text-align:center">Total</th><th style="text-align:center">Emitidas</th><th style="text-align:center">Pend.</th><th style="text-align:center">Atraso</th><th>% Conclusão</th><th style="text-align:center">SLA Médio</th><th style="text-align:center">Aut. Exérc.</th></tr></thead><tbody id="dashVendBody"></tbody></table></div>
+</div>
+<div class="card chart-card">
+<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px"><div><h4>Radar de Atenção Imediata (Prazos Críticos)</h4><div class="ch-sub" style="margin-bottom:0">D.Bs atrasadas ou com prazo vencendo nos próximos dias (clique para abrir)</div></div></div>
+<div class="mini-table-wrap"><table class="mini-table"><thead><tr><th>OS</th><th>Cliente</th><th>Veículo</th><th>Vendedor</th><th>Prazo D.B</th><th>Situação</th></tr></thead><tbody id="dashAlertBody"></tbody></table></div>
+</div>
+</div>
+</section>
+<section id="view-unified" class="hidden">
+<div class="section-head"><div><h3>Visão Unificada por OS</h3><p id="uniCount">0 processos</p></div><div style="display:flex;gap:8px"><button class="btn btn-ghost" id="btnExportUni"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>Exportar</button></div></div>
+<div class="card" style="padding:14px">
+<div class="toolbar">
+<div class="search-box"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg><input type="text" id="fUniSearch" placeholder="Buscar: OS, cliente, vendedor..."></div>
+<select id="fUniVend"><option value="">Vendedor: todos</option></select>
+<select id="fUniStatus"><option value="">Status: todos</option><option value="completo">Completo (D.B + Aut.)</option><option value="so-dbs">Apenas D.B</option><option value="so-aut">Apenas Autorização</option></select>
+<button class="btn btn-ghost btn-sm" id="btnUniClear">Limpar</button>
+</div>
+<div class="temporal-bar">
+<div class="temporal-group"><label>Filtrar por</label><select id="fUniDateField"><option value="">Qualquer data</option><option value="emissaoDB">Emissão D.B</option><option value="prazoEmissao">Prazo Emissão</option><option value="sicovab">Envio Sicovab</option><option value="autorizacao">Autorização / Emissão Exército</option><option value="emissaoTermo">Emissão Termo</option></select></div>
+<div class="temporal-group"><label>Data Específica</label><input type="date" id="fUniDate"></div>
+<div class="temporal-group"><label>Mês</label><select id="fUniMonth"><option value="">Mês: todos</option><option value="01">Janeiro</option><option value="02">Fevereiro</option><option value="03">Março</option><option value="04">Abril</option><option value="05">Maio</option><option value="06">Junho</option><option value="07">Julho</option><option value="08">Agosto</option><option value="09">Setembro</option><option value="10">Outubro</option><option value="11">Novembro</option><option value="12">Dezembro</option></select></div>
+<div class="temporal-group"><label>Ano</label><select id="fUniYear" class="year-select"><option value="">Ano: todos</option></select></div>
+<div class="temporal-group full-mob"><label>Período (De — Até)</label><div class="temporal-period"><input type="date" id="fUniFrom" title="Data inicial"><span>até</span><input type="date" id="fUniTo" title="Data final"></div></div>
+</div>
+<div class="table-wrap"><table style="min-width:1400px"><thead><tr id="uniHeadRow"></tr></thead><tbody id="uniBody"></tbody></table></div>
+<div class="pagination"><span class="pg-info" id="uniPgInfo"></span><div class="pg-btns" id="uniPgBtns"></div></div>
+</div>
+</section>
+<section id="view-records" class="hidden">
+<div class="section-head"><div><h3>Declarações de Blindagem</h3><p id="recCount">0 registros</p></div><div style="display:flex;gap:8px"><button class="btn btn-ghost" id="btnExport"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>Exportar</button></div></div>
+<div class="card" style="padding:14px">
+<div class="toolbar">
+<div class="search-box"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg><input type="text" id="fSearch" placeholder="Buscar: OS, cliente, chassi, vendedor..."></div>
+<select id="fVend"><option value="">Vendedor: todos</option></select>
+<select id="fCliente"><option value="">Cliente: todos</option></select>
+<select id="fBlind"><option value="">Blindagem: todas</option></select>
+<select id="fStatus"><option value="">Status: todos</option><option value="emitido">Emitidas</option><option value="pendente">Pendentes</option><option value="atrasado">Atrasadas</option></select>
+<button class="btn btn-ghost btn-sm" id="btnClear">Limpar</button>
+</div>
+<div class="temporal-bar">
+<div class="temporal-group"><label>Filtrar por</label><select id="fRecDateField"><option value="">Qualquer data</option><option value="emissaoDB">Emissão D.B</option><option value="prazoEmissaoDB">Prazo D.B</option><option value="sicovabEnvio">Envio Sicovab</option><option value="autorizacao">Autorização</option><option value="emissaoTermo">Emissão Termo</option><option value="engenhariaAss">Engenharia Ass.</option><option value="procAss">Proc. Ass.</option></select></div>
+<div class="temporal-group"><label>Data Específica</label><input type="date" id="fRecDate"></div>
+<div class="temporal-group"><label>Mês</label><select id="fRecMonth"><option value="">Mês: todos</option><option value="01">Janeiro</option><option value="02">Fevereiro</option><option value="03">Março</option><option value="04">Abril</option><option value="05">Maio</option><option value="06">Junho</option><option value="07">Julho</option><option value="08">Agosto</option><option value="09">Setembro</option><option value="10">Outubro</option><option value="11">Novembro</option><option value="12">Dezembro</option></select></div>
+<div class="temporal-group"><label>Ano</label><select id="fRecYear" class="year-select"><option value="">Ano: todos</option></select></div>
+<div class="temporal-group full-mob"><label>Período (De — Até)</label><div class="temporal-period"><input type="date" id="fRecFrom" title="Data inicial"><span>até</span><input type="date" id="fRecTo" title="Data final"></div></div>
+</div>
+<div class="table-wrap"><table><thead><tr id="theadRow"></tr></thead><tbody id="tbodyRec"></tbody></table></div>
+<div class="pagination"><span class="pg-info" id="pgInfo"></span><div class="pg-btns" id="pgBtns"></div></div>
+</div>
+</section>
+<section id="view-exercicio" class="hidden">
+<div class="section-head"><div><h3>Autorização Pendente — Exército</h3><p id="excCount">0 processos</p></div><div style="display:flex;gap:8px"><button class="btn btn-ghost" id="btnExportExc"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>Exportar</button></div></div>
+<div class="card" style="padding:14px">
+<div class="toolbar">
+<div class="search-box"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg><input type="text" id="fExcSearch" placeholder="Buscar: OS, cliente, vendedor, chassi..."></div>
+<select id="fExcVend"><option value="">Vendedor: todos</option></select>
+<select id="fExcStatus"><option value="">Status Exército: todos</option></select>
+<div class="date-tags-filter">
+<div class="date-tags-input"><input type="date" id="fExcDateInput" title="Selecione uma data"><button type="button" id="btnExcAddDate">+ Adicionar</button></div>
+<div class="date-tags-list" id="fExcDateTags"></div>
+<div class="date-tags-hint">Filtra por envio Sicovab, prazo, emissão, coleta</div>
+</div>
+<button class="btn btn-ghost btn-sm" id="btnExcClear">Limpar</button>
+</div>
+<div class="temporal-bar">
+<div class="temporal-group"><label>Filtrar por</label><select id="fExcDateField"><option value="">Qualquer data</option><option value="envioSicovab">Envio Sicovab</option><option value="prazoEmissao">Prazo Emissão</option><option value="dataEmissao">Data Emissão</option><option value="dataColeta">Data Coleta</option><option value="prazo9dias">Prazo 9 Dias</option><option value="dtaPrev07">Prev. 07 Dias</option><option value="dtaPrev09">Prev. 09 Dias</option></select></div>
+<div class="temporal-group"><label>Data Específica</label><input type="date" id="fExcDate"></div>
+<div class="temporal-group"><label>Mês</label><select id="fExcMonth"><option value="">Mês: todos</option><option value="01">Janeiro</option><option value="02">Fevereiro</option><option value="03">Março</option><option value="04">Abril</option><option value="05">Maio</option><option value="06">Junho</option><option value="07">Julho</option><option value="08">Agosto</option><option value="09">Setembro</option><option value="10">Outubro</option><option value="11">Novembro</option><option value="12">Dezembro</option></select></div>
+<div class="temporal-group"><label>Ano</label><select id="fExcYear" class="year-select"><option value="">Ano: todos</option></select></div>
+<div class="temporal-group full-mob"><label>Período (De — Até)</label><div class="temporal-period"><input type="date" id="fExcFrom" title="Data inicial"><span>até</span><input type="date" id="fExcTo" title="Data final"></div></div>
+</div>
+<div class="table-wrap"><table style="min-width:1200px"><thead><tr id="excHeadRow"></tr></thead><tbody id="excBody"></tbody></table></div>
+<div class="pagination"><span class="pg-info" id="excPgInfo"></span><div class="pg-btns" id="excPgBtns"></div></div>
+</div>
+</section>
+<section id="view-import" class="hidden">
+<div class="section-head">
+<div><h3>Importar planilhas</h3><p>O último upload fica salvo e criptografado (Local, Cofre em Nuvem e HTML Publicável)</p></div>
+<div style="display:flex;gap:8px;flex-wrap:wrap">
+<button class="btn btn-ghost" onclick="exportDatabaseJSON()">💾 Baixar Backup (.json)</button>
+<button class="btn btn-ghost" onclick="document.getElementById('restoreDbInput').click()">📂 Restaurar Backup (.json)</button>
+<input type="file" id="restoreDbInput" accept=".json" class="hidden">
+<button class="btn btn-ghost" onclick="openCloudConfigModal()">🔐 Cofre na Nuvem</button>
+<button class="btn btn-primary" onclick="exportEmbeddedHTML()">🌐 Baixar HTML Criptografado</button>
+</div>
+</div>
+<div class="security-notice"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="m9 12 2 2 4-4"/></svg><span><b>Segurança Máxima:</b> Nenhum dado é público. O sistema exige login e senha e criptografa toda a base salva no HTML e no Cofre da Nuvem.</span></div>
+<div class="card" style="padding:20px">
+<div class="import-tabs"><div class="import-tab active" data-tab="dbs">📄 Sicovab (D.Bs)</div><div class="import-tab" data-tab="aut">🟡 Autorizações Pendentes</div></div>
+<div id="impTabDbs">
+<div class="saved-sheet-box"><div class="saved-sheet-info"><h5>📌 Última Planilha Sicovab (D.Bs) Salva no Sistema</h5><p id="savedInfoDbs">Nenhuma planilha salva ainda.</p></div><button class="btn btn-ghost btn-sm" id="btnDownloadSavedDbs">⬇ Baixar Planilha D.Bs Ativa (.xlsx)</button></div>
+<div class="import-zone" id="dropZoneDbs"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M12 18v-6M9 15l3 3 3-3"/></svg><h4 style="font-size:14px;margin-bottom:4px">Arraste a planilha Sicovab aqui</h4><p style="font-size:11px;color:var(--muted);margin-bottom:14px">Arquivo .xlsx com declarações de blindagem</p><button class="btn btn-primary" onclick="document.getElementById('fileInputDbs').click()">Selecionar arquivo</button><input type="file" id="fileInputDbs" accept=".xlsx,.xls,.csv" class="hidden"></div>
+<div id="importPanelDbs" class="hidden" style="margin-top:14px"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px"><span style="font-size:13px;font-weight:700" id="pvCountDbs"></span><button class="btn btn-ghost btn-sm" id="pvCancelDbs">Cancelar</button></div><div class="import-modes"><div class="mode-card sel" data-mode="merge" data-target="dbs"><h5>① Mesclar (Recomendado)</h5><p>Atualiza pela OS e preserva alterações.</p></div><div class="mode-card" data-mode="replace" data-target="dbs"><h5>② Substituir tudo</h5><p>Apaga e carrega só a planilha.</p></div><div class="mode-card" data-mode="add" data-target="dbs"><h5>③ Apenas novos</h5><p>Só adiciona OS novas.</p></div></div><button class="btn btn-primary" id="btnConfirmDbs">Confirmar importação D.Bs</button></div>
+</div>
+<div id="impTabAut" class="hidden">
+<div class="saved-sheet-box"><div class="saved-sheet-info"><h5>📌 Última Planilha de Autorizações Salva no Sistema</h5><p id="savedInfoAut">Nenhuma planilha salva ainda.</p></div><button class="btn btn-ghost btn-sm" id="btnDownloadSavedAut">⬇ Baixar Planilha Autorizações Ativa (.xlsx)</button></div>
+<div class="import-zone" id="dropZoneAut"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M12 18v-6M9 15l3 3 3-3"/></svg><h4 style="font-size:14px;margin-bottom:4px">Arraste a planilha de Autorizações Pendentes</h4><p style="font-size:11px;color:var(--muted);margin-bottom:14px">Arquivo .xlsx com processos aguardando autorização do Exército</p><button class="btn btn-primary" onclick="document.getElementById('fileInputAut').click()">Selecionar arquivo</button><input type="file" id="fileInputAut" accept=".xlsx,.xls,.csv" class="hidden"></div>
+<div id="importPanelAut" class="hidden" style="margin-top:14px"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px"><span style="font-size:13px;font-weight:700" id="pvCountAut"></span><button class="btn btn-ghost btn-sm" id="pvCancelAut">Cancelar</button></div><div class="import-modes"><div class="mode-card sel" data-mode="merge" data-target="aut"><h5>① Mesclar (Recomendado)</h5><p>Atualiza pela OS e preserva alterações.</p></div><div class="mode-card" data-mode="replace" data-target="aut"><h5>② Substituir tudo</h5><p>Apaga e carrega só a planilha.</p></div><div class="mode-card" data-mode="add" data-target="aut"><h5>③ Apenas novos</h5><p>Só adiciona OS novas.</p></div></div><button class="btn btn-primary" id="btnConfirmAut">Confirmar importação Autorizações</button></div>
+</div>
+</div>
+</section>
+<section id="view-users" class="hidden">
+<div class="section-head"><div><h3>Usuários & Equipes</h3><p>Gerencie acesso, perfis e equipes</p></div><button class="btn btn-primary" id="btnNewUser"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>Novo usuário</button></div>
+<div class="security-notice"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg><span><b>Senhas e Perfis Blindados:</b> Qualquer promoção a Gerente/Admin ou alteração de senha é sincronizada em tempo real em todos os dispositivos.</span></div>
+<div class="card table-wrap"><table style="min-width:800px"><thead><tr><th>Usuário</th><th>E-mail</th><th>Perfil</th><th>Equipe / Vínculo</th><th>Última alteração</th><th style="text-align:right">Ações</th></tr></thead><tbody id="tbodyUsers"></tbody></table></div>
+</section>
+</main>
+<nav class="mobile-bottom-nav" id="mobileBottomNav">
+<button type="button" class="mob-nav-btn active" data-view="dashboard"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="9" rx="1"/><rect x="14" y="3" width="7" height="5" rx="1"/><rect x="14" y="12" width="7" height="9" rx="1"/><rect x="3" y="16" width="7" height="5" rx="1"/></svg><span>Dashboard</span></button>
+<button type="button" class="mob-nav-btn" data-view="unified"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></svg><span>Unificada</span></button>
+<button type="button" class="mob-nav-btn" data-view="records"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/></svg><span>D.Bs</span></button>
+<button type="button" class="mob-nav-btn" data-view="exercicio"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg><span>Exército</span></button>
+<button type="button" class="mob-nav-btn" id="btnMobMoreMenu"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M3 12h18M3 18h18"/></svg><span>Menu</span></button>
+</nav>
+</div>
+</div>
+<div id="modalRoot"></div><div id="toastRoot"></div>
+<script>
+const $=s=>document.querySelector(s),$$=s=>[...document.querySelectorAll(s)];
+function esc(s){return String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
+function hash(str){const clean=String(str==null?'':str).trim();let h=0;for(let i=0;i<clean.length;i++){h=((h<<5)-h)+clean.charCodeAt(i);h|=0}return'h'+Math.abs(h).toString(36)}
+window.togglePassVis=function(id){const el=document.getElementById(id);if(el)el.type=el.type==='password'?'text':'password'};
+const MONTH_PT=['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+const MONTH_MAP={jan:0,feb:1,mar:2,apr:3,may:4,jun:5,jul:6,aug:7,sep:8,oct:9,nov:10,dec:11};
+function toggleMobileSidebar(forceOpen){const sb=$('#sidebar'),bd=$('#sidebarBackdrop');if(!sb||!bd)return;const isOpen=forceOpen!==undefined?forceOpen:!sb.classList.contains('open');sb.classList.toggle('open',isOpen);bd.classList.toggle('open',isOpen)}
+const CIPHER_SECRET='CBS_ARMOR_VAULT_KEY_2026_#9981_PRIVATE';
+function encryptVaultPayload(obj,extraKey=''){try{const json=JSON.stringify(obj);const bytes=new TextEncoder().encode(json);const keyStr=CIPHER_SECRET+'|'+(extraKey||'');const keyBytes=new TextEncoder().encode(keyStr);const out=new Uint8Array(bytes.length);for(let i=0;i<bytes.length;i++){out[i]=bytes[i]^keyBytes[i%keyBytes.length]^((i*31)&0xff)}let bin='';const chunk=8192;for(let i=0;i<out.length;i+=chunk){bin+=String.fromCharCode.apply(null,out.subarray(i,i+chunk))}return 'CBS_ENC_V1:'+btoa(bin)}catch(e){return JSON.stringify(obj)}}
+function decryptVaultPayload(raw,extraKey=''){if(!raw)return null;if(typeof raw==='object')return raw;const s=String(raw).trim();if(!s||s==='null')return null;if(s.startsWith('CBS_ENC_V1:')){try{const b64=s.slice(11);const bin=atob(b64);const bytes=new Uint8Array(bin.length);for(let i=0;i<bin.length;i++)bytes[i]=bin.charCodeAt(i);const keyStr=CIPHER_SECRET+'|'+(extraKey||'');const keyBytes=new TextEncoder().encode(keyStr);const out=new Uint8Array(bytes.length);for(let i=0;i<bytes.length;i++){out[i]=bytes[i]^keyBytes[i%keyBytes.length]^((i*31)&0xff)}const json=new TextDecoder().decode(out);return JSON.parse(json)}catch(e){return null}}try{return JSON.parse(s)}catch(e){return null}}
+function parseDate(v){if(v==null||v==='')return null;if(v==='31-Dec-99'||v==='1/9/00'||v==='0')return null;if(v instanceof Date){const y=v.getFullYear();if(y<2000||y>2100)return null;return`${y}-${String(v.getMonth()+1).padStart(2,'0')}-${String(v.getDate()).padStart(2,'0')}`}if(typeof v==='number'){if(v<36000||v>80000)return null;const d=new Date(Math.round((v-25569)*86400*1000));const y=d.getFullYear();if(y<2000||y>2100)return null;return`${y}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`}let s=String(v).trim();if(!s||s==='31-Dec-99'||s==='1/9/00'||s==='0')return null;if(s.includes('tc={')||s.includes('Threaded comment')||s.includes('Comment:'))return null;let m=s.match(/^(\d{1,2})[-\/\.\s]([A-Za-zÀ-ÿ]{3,})[-\/\.\s](\d{2,4})$/);if(m){const mo=MONTH_MAP[m[2].toLowerCase().slice(0,3)];if(mo==null)return null;let y=parseInt(m[3]);if(y<100)y+=2000;if(y<2000)return null;return`${y}-${String(mo+1).padStart(2,'0')}-${m[1].padStart(2,'0')}`}m=s.match(/^(\d{1,2})[-\/](\d{1,2})[-\/](\d{2,4})$/);if(m){let y=parseInt(m[3]);if(y<100)y+=2000;if(y<2000)return null;return`${y}-${m[2].padStart(2,'0')}-${m[1].padStart(2,'0')}`}m=s.match(/^(\d{4})-(\d{2})-(\d{2})/);if(m){if(parseInt(m[1])<2000)return null;return`${m[1]}-${m[2]}-${m[3]}`}return null}
+function fmtDate(iso){if(!iso)return'—';const p=iso.split('-');if(p.length!==3)return'—';return`${p[2]}/${p[1]}/${p[0]}`}
+function fmtDateTime(iso){if(!iso)return'—';try{const d=new Date(iso);if(isNaN(d))return'—';return d.toLocaleDateString('pt-BR')+' '+d.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})}catch(e){return'—'}}
+function todayISO(){return new Date().toISOString().slice(0,10)}
+function addDaysISO(iso,days){const d=new Date(iso+'T12:00:00');d.setDate(d.getDate()+days);return d.toISOString().slice(0,10)}
+function vendName(e){return String(e||'').trim().split('@')[0]}
+function vendColor(e){let h=0;for(let i=0;i<(e||'').length;i++)h=(h*31+(e||'').charCodeAt(i))>>>0;const P=['#3b82f6','#10b981','#f59e0b','#ef4444','#8b5cf6','#ec4899','#14b8a6','#f97316','#6366f1','#84cc16','#06b6d4','#e11d48','#a855f7','#65a30d','#0891b2','#db2777'];return P[h%P.length]}
+
+const DB_KEY='cbs_final_v9',SES_KEY='cbs_session_v9',USERS_VAULT_KEY='cbs_users_vault_v9',CLOUD_CFG_KEY='cbs_cloud_url_v9',CLOUD_SECRET_KEY='cbs_cloud_secret_v9',LOCKOUT_KEY='cbs_login_lock_v9',LAST_EMB_TS_KEY='cbs_last_emb_ts_v9';
+const SESSION_TIMEOUT_MS=30*60*1000;
+const IDB_NAME='cbs_permanent_db_v9',IDB_STORE='cbs_store';
+const ADMIN_DEFAULT_HASH=hash('admin123');
+const DEFAULT_HASH=hash('123456');
+
+let DB={
+  usuarios:[{email:'admin@conceptbesafe.com.br',name:'Administrador',pass:ADMIN_DEFAULT_HASH,role:'admin',team:[],mustChange:false,createdAt:'2025-01-01T00:00:00.000Z',passwordLastChanged:null,updatedAt:null}],
+  declaracoes:[],
+  autorizacoes:[],
+  deletedUsers:[],
+  config:{
+    theme:'light',
+    // ⚠️ ATENÇÃO: CONFIRA SE A SUA URL É 'concept' ou 'concent' NO FIREBASE. DEIXEI 'concept' PORQUE FOI O QUE VOCÊ DIGITOU.
+    cloudUrl:'https://controle-sicovab-concept-default-rtdb.firebaseio.com',
+    vaultKey:'CBS_VAULT_Epe3rY8Su9hSfWtcXX5zWJ7C'
+  },
+  lastUpdate:{dbs:null,aut:null},
+  lastFiles:{dbs:{name:'',count:0},aut:{name:'',count:0}}
+};
+let currentUser=null,charts={},inactivityTimer=null,syncInterval=null;
+let dashState={vend:'',status:'',dateField:'',date:'',month:'',year:'',from:'',to:''};
+let tableState={search:'',vend:'',cli:'',blind:'',status:'',dateField:'',date:'',month:'',year:'',from:'',to:'',sortKey:'os',sortDir:'desc',page:1,perPage:25};
+let excState={search:'',vend:'',status:'',dates:[],dateField:'',date:'',month:'',year:'',from:'',to:'',page:1,perPage:25};
+let uniState={search:'',vend:'',status:'',dateField:'',date:'',month:'',year:'',from:'',to:'',page:1,perPage:25};
+let pendingDbs=null,pendingAut=null,pendingFileNameDbs='',pendingFileNameAut='';
+let importModeDbs='merge',importModeAut='merge';
+
+async function fetchWithTimeout(url,options={},timeoutMs=3000){
+  const ctrl=new AbortController();
+  const id=setTimeout(()=>ctrl.abort(),timeoutMs);
+  try{
+    const res=await fetch(url,{...options,signal:ctrl.signal});
+    clearTimeout(id);
+    return res;
+  }catch(e){
+    clearTimeout(id);
+    return null;
+  }
+}
+
+function getEmbeddedSnapshot(){try{const el=document.getElementById('cbs-embedded-data');if(!el||!el.textContent)return null;return decryptVaultPayload(el.textContent.trim())}catch(e){return null}}
+let _idbInstance=null;
+function openIDB(){if(_idbInstance)return Promise.resolve(_idbInstance);return new Promise(resolve=>{if(!window.indexedDB){resolve(null);return}try{const req=indexedDB.open(IDB_NAME,1);req.onupgradeneeded=e=>{const db=e.target.result;if(!db.objectStoreNames.contains(IDB_STORE))db.createObjectStore(IDB_STORE)};req.onsuccess=e=>{_idbInstance=e.target.result;resolve(_idbInstance)};req.onerror=()=>resolve(null)}catch(e){resolve(null)}})}
+async function idbSet(key,val){try{const db=await openIDB();if(!db)return false;return await new Promise(resolve=>{const tx=db.transaction(IDB_STORE,'readwrite');tx.objectStore(IDB_STORE).put(val,key);tx.oncomplete=()=>resolve(true);tx.onerror=()=>resolve(false)})}catch(e){return false}}
+async function idbGet(key){try{const db=await openIDB();if(!db)return null;return await new Promise(res=>{const tx=db.transaction(IDB_STORE,'readonly');const r=tx.objectStore(IDB_STORE).get(key);r.onsuccess=()=>res(r.result||null);r.onerror=()=>res(null)})}catch(e){return null}}
+
+const ROLE_RANK={vendedor:1,gerente:2,admin:3};
+function getUserStamp(u){
+  if(!u)return 0;
+  const t1=u.updatedAt?new Date(u.updatedAt).getTime():0;
+  const t2=u.passwordLastChanged?new Date(u.passwordLastChanged).getTime():0;
+  return Math.max(isNaN(t1)?0:t1,isNaN(t2)?0:t2);
+}
+function mergeUsersVault(...lists){
+  const map=new Map();
+  const deletedSet=new Set((DB.deletedUsers||[]).map(e=>String(e).toLowerCase()));
+  lists.forEach(arr=>{
+    (arr||[]).forEach(u=>{
+      if(!u||!u.email)return;
+      const key=u.email.trim().toLowerCase();
+      if(deletedSet.has(key)&&key!=='admin@conceptbesafe.com.br')return;
+      const normalized={...u,email:key,role:u.role||'vendedor',team:Array.isArray(u.team)?u.team:[]};
+      if(!map.has(key)){
+        map.set(key,normalized);
+      }else{
+        const cur=map.get(key);
+        const sCur=getUserStamp(cur);
+        const sNew=getUserStamp(normalized);
+
+        const pCur=cur.passwordLastChanged?new Date(cur.passwordLastChanged).getTime():0;
+        const pNew=normalized.passwordLastChanged?new Date(normalized.passwordLastChanged).getTime():0;
+        const curCustom=Boolean(cur.passwordLastChanged||cur.mustChange===false||(cur.pass&&cur.pass!==DEFAULT_HASH));
+        const newCustom=Boolean(normalized.passwordLastChanged||normalized.mustChange===false||(normalized.pass&&normalized.pass!==DEFAULT_HASH));
+
+        let bestPass=cur.pass,bestMustChange=cur.mustChange,bestPassTime=cur.passwordLastChanged;
+        if(pNew>pCur||(sNew>sCur&&normalized.pass)||(newCustom&&!curCustom)){
+          bestPass=normalized.pass;
+          bestMustChange=normalized.mustChange;
+          bestPassTime=normalized.passwordLastChanged||normalized.updatedAt||cur.passwordLastChanged;
+        }else if((pCur===pNew&&sNew>=sCur&&normalized.pass)||(newCustom&&!curCustom&&normalized.pass)){
+          bestPass=normalized.pass;
+          bestMustChange=normalized.mustChange;
+          bestPassTime=normalized.passwordLastChanged||cur.passwordLastChanged;
+        }
+
+        const rankCur=ROLE_RANK[cur.role]||1;
+        const rankNew=ROLE_RANK[normalized.role]||1;
+        let bestRole=cur.role,bestTeam=(cur.team&&cur.team.length)?cur.team:(normalized.team||[]),bestName=cur.name||normalized.name;
+        if(sNew>sCur){
+          bestRole=normalized.role;
+          bestTeam=normalized.team||[];
+          bestName=normalized.name||cur.name;
+        }else if(sCur===sNew){
+          if(rankNew>=rankCur){
+            bestRole=normalized.role;
+            if(normalized.team&&normalized.team.length)bestTeam=normalized.team;
+          }
+          if(normalized.name)bestName=normalized.name;
+        }
+
+        const bestUpd=sNew>=sCur?(normalized.updatedAt||cur.updatedAt):cur.updatedAt;
+        map.set(key,{...cur,...normalized,name:bestName,role:bestRole,team:bestTeam,pass:bestPass,mustChange:bestMustChange,passwordLastChanged:bestPassTime,updatedAt:bestUpd});
+      }
+    });
+  });
+  return Array.from(map.values());
+}
+
+function cleanLegacyStorageKeys(){['cbs_final_v9_backup','concept_db_system_v1','concept_db_control_v2','concept_db_session_v1','concept_db_session_v2',LOCKOUT_KEY].forEach(k=>{try{localStorage.removeItem(k)}catch(e){}})}
+async function saveUsersVault(){try{localStorage.setItem(USERS_VAULT_KEY,JSON.stringify(DB.usuarios))}catch(e){}await idbSet(USERS_VAULT_KEY,JSON.parse(JSON.stringify(DB.usuarios)))}
+function createBackup(context){try{cleanLegacyStorageKeys();const backup={timestamp:new Date().toISOString(),context,usuarios:JSON.parse(JSON.stringify(DB.usuarios)),declaracoes:JSON.parse(JSON.stringify(DB.declaracoes)),autorizacoes:JSON.parse(JSON.stringify(DB.autorizacoes)),lastUpdate:JSON.parse(JSON.stringify(DB.lastUpdate)),lastFiles:JSON.parse(JSON.stringify(DB.lastFiles))};idbSet(DB_KEY+'_backup',backup)}catch(e){}}
+async function saveLocalOnly(){cleanLegacyStorageKeys();await saveUsersVault();const snapshot=JSON.parse(JSON.stringify(DB));await idbSet(DB_KEY,snapshot);try{localStorage.setItem(DB_KEY,JSON.stringify(DB))}catch(e){try{localStorage.setItem(DB_KEY,JSON.stringify({usuarios:DB.usuarios,deletedUsers:DB.deletedUsers||[],declaracoes:[],autorizacoes:[],config:DB.config,lastUpdate:DB.lastUpdate,lastFiles:DB.lastFiles,_storedInIDBOnly:true}))}catch(e2){}}}
+
+async function saveDB(syncScope='all'){
+  await saveLocalOnly();
+  const ok = await pushToCloud(syncScope);
+  if(!ok && getCloudBaseUrl()){
+    toast('⚠️ Salvo neste aparelho, mas NÃO sincronizou na nuvem. Verifique o Cofre Nuvem.','err');
+    console.warn('[CBS] pushToCloud retornou FALSE para scope=' + syncScope);
+  }
+  return ok;
+}
+
+function pickBestDataset(candidates,typeKey){let bestRecs=[];let bestTime=0;let bestFile={name:'',count:0};candidates.forEach(src=>{if(!src)return;const arr=typeKey==='dbs'?src.declaracoes:src.autorizacoes;if(!Array.isArray(arr)||arr.length===0)return;const rawTime=src.lastUpdate&&src.lastUpdate[typeKey]?new Date(src.lastUpdate[typeKey]).getTime():0;const t=isNaN(rawTime)?0:rawTime;if(bestRecs.length===0||t>bestTime||(t===bestTime&&arr.length>bestRecs.length)){bestRecs=arr;bestTime=t;if(src.lastFiles&&src.lastFiles[typeKey])bestFile=src.lastFiles[typeKey];else bestFile={name:'',count:arr.length}}});return{records:bestRecs,timestamp:bestTime>0?new Date(bestTime).toISOString():(bestRecs.length>0?new Date().toISOString():null),fileMeta:bestFile}}
+
+async function loadAllDatabases(){
+  cleanLegacyStorageKeys();
+  const embedded=getEmbeddedSnapshot();
+  let locData=null,locVaultUsers=[];
+  try{const r=localStorage.getItem(DB_KEY);if(r)locData=JSON.parse(r)}catch(e){}
+  try{const v=localStorage.getItem(USERS_VAULT_KEY);if(v)locVaultUsers=JSON.parse(v)||[]}catch(e){}
+  const [idbData,idbVaultUsers]=await Promise.all([idbGet(DB_KEY),idbGet(USERS_VAULT_KEY)]);
+
+  const delSet=new Set([
+    ...((embedded&&embedded.deletedUsers)||[]),
+    ...((locData&&locData.deletedUsers)||[]),
+    ...((idbData&&idbData.deletedUsers)||[])
+  ].map(e=>String(e).toLowerCase()));
+  DB.deletedUsers=Array.from(delSet);
+
+  const sources=[embedded,locData,idbData].filter(Boolean);
+  const bestDbs=pickBestDataset(sources,'dbs');
+  DB.declaracoes=bestDbs.records;DB.lastUpdate.dbs=bestDbs.timestamp;DB.lastFiles.dbs=bestDbs.fileMeta;
+  const bestAut=pickBestDataset(sources,'aut');
+  DB.autorizacoes=bestAut.records;DB.lastUpdate.aut=bestAut.timestamp;DB.lastFiles.aut=bestAut.fileMeta;
+
+  const embTs=embedded&&embedded.exportedAt?new Date(embedded.exportedAt).getTime():0;
+  const lastSeenEmbTs=Number(localStorage.getItem(LAST_EMB_TS_KEY)||0);
+  if(embTs>lastSeenEmbTs){
+    try{localStorage.setItem(LAST_EMB_TS_KEY,String(embTs))}catch(e){}
+    DB.usuarios=mergeUsersVault(locData&&locData.usuarios,idbData&&idbData.usuarios,locVaultUsers,idbVaultUsers,embedded&&embedded.usuarios);
+  }else{
+    DB.usuarios=mergeUsersVault(embedded&&embedded.usuarios,locData&&locData.usuarios,idbData&&idbData.usuarios,locVaultUsers,idbVaultUsers);
+  }
+
+  sources.forEach(s=>{
+    if(s&&s.config){
+      if(s.config.theme)DB.config.theme=s.config.theme;
+      // REMOVIDO: Não deixa o cache do celular sobrescrever a URL e a Chave que estão cravadas no código
+      // if(s.config.cloudUrl)DB.config.cloudUrl=s.config.cloudUrl;
+      // if(s.config.vaultKey)DB.config.vaultKey=s.config.vaultKey;
+    }
+  });
+}
+
+function getCloudBaseUrl(){const emb=getEmbeddedSnapshot();const u=(DB.config&&DB.config.cloudUrl)||localStorage.getItem(CLOUD_CFG_KEY)||(emb&&emb.config&&emb.config.cloudUrl)||'';return String(u).trim().replace(/\/+$/,'')}
+function getCloudVaultKey(){const emb=getEmbeddedSnapshot();const k=(DB.config&&DB.config.vaultKey)||localStorage.getItem(CLOUD_SECRET_KEY)||(emb&&emb.config&&emb.config.vaultKey)||'';return String(k).trim().replace(/[^a-zA-Z0-9_-]/g,'')}
+function getCloudEndpoint(nodeName){const base=getCloudBaseUrl();if(!base)return '';const vKey=getCloudVaultKey();const isFirebase=base.includes('firebaseio.com')||base.includes('firebasedatabase.app');if(isFirebase){return vKey?`${base}/vaults/${vKey}/${nodeName}.json`:`${base}/${nodeName}.json`}return base}
+
+async function pushToCloud(scope='all'){
+  const base=getCloudBaseUrl();
+  if(!base)return false;
+  const vKey=getCloudVaultKey();
+  try{
+    const badge=$('#storageBadge');
+    if(badge)badge.textContent='🔄 Sincronizando alterações na nuvem...';
+    console.log('[CBS] pushToCloud →', scope, 'base=', base, 'vKeyLen=', (vKey||'').length);
+    const isFirebase=base.includes('firebaseio.com')||base.includes('firebasedatabase.app');
+    const tsParam='?t='+Date.now();
+    if(isFirebase){
+      const uUrl=getCloudEndpoint('cbs_users_enc');
+      const rGet=await fetchWithTimeout(uUrl+tsParam,{cache:'no-store'},3000);
+      const remoteRaw=rGet&&rGet.ok?await rGet.json().catch(()=>null):null;
+      const remoteObj=remoteRaw&&remoteRaw.cipher?decryptVaultPayload(remoteRaw.cipher,vKey):remoteRaw;
+      const remoteUsers=Array.isArray(remoteObj)?remoteObj:(remoteObj&&Array.isArray(remoteObj.usuarios)?remoteObj.usuarios:null);
+      const remoteDeleted=(remoteObj&&Array.isArray(remoteObj.deletedUsers))?remoteObj.deletedUsers:[];
+      if(remoteDeleted.length){
+        DB.deletedUsers=[...new Set([...(DB.deletedUsers||[]),...remoteDeleted])];
+      }
+      if(Array.isArray(remoteUsers)){
+        DB.usuarios=mergeUsersVault(remoteUsers,DB.usuarios);
+        await saveUsersVault();
+      }
+      await fetchWithTimeout(uUrl,{
+        method:'PUT',
+        headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({cipher:encryptVaultPayload({usuarios:DB.usuarios,deletedUsers:DB.deletedUsers||[]},vKey),updatedAt:new Date().toISOString()})
+      },4000);
+      if(scope==='all'||scope==='sheets'){
+        const sUrl=getCloudEndpoint('cbs_sheets_enc');
+        const sheetsPayload={declaracoes:DB.declaracoes,autorizacoes:DB.autorizacoes,lastUpdate:DB.lastUpdate,lastFiles:DB.lastFiles};
+        await fetchWithTimeout(sUrl,{
+          method:'PUT',
+          headers:{'Content-Type':'application/json'},
+          body:JSON.stringify({cipher:encryptVaultPayload(sheetsPayload,vKey),updatedAt:new Date().toISOString()})
+        },6000);
+      }
+    }else{
+      const fullPayload={usuarios:DB.usuarios,deletedUsers:DB.deletedUsers||[],declaracoes:DB.declaracoes,autorizacoes:DB.autorizacoes,lastUpdate:DB.lastUpdate,lastFiles:DB.lastFiles};
+      await fetchWithTimeout(base,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({cipher:encryptVaultPayload(fullPayload,vKey)})},5000);
+    }
+    console.log('[CBS] pushToCloud OK', scope, 'em', new Date().toISOString());
+    window.__lastPushOK = new Date().toISOString();
+    updateBarRender();
+    // Removido o setTimeout(pullFromCloud) daqui, pois o WebSocket já atualiza a tela.
+    return true;
+  }catch(e){
+    console.error('[CBS] pushToCloud FALHOU:', e);
+    updateBarRender();
+    return false;
+  }
+}
+
+async function pullFromCloud(silent=true){
+  const base=getCloudBaseUrl();
+  if(!base)return false;
+  const vKey=getCloudVaultKey();
+  let remoteUsers=null,remoteDeleted=[],remoteSheets=null;
+  const tsParam='?t='+Date.now();
+  try{
+    const isFirebase=base.includes('firebaseio.com')||base.includes('firebasedatabase.app');
+    if(isFirebase){
+      const [rU,rS]=await Promise.all([
+        fetchWithTimeout(getCloudEndpoint('cbs_users_enc')+tsParam,{cache:'no-store'},3000),
+        fetchWithTimeout(getCloudEndpoint('cbs_sheets_enc')+tsParam,{cache:'no-store'},3500)
+      ]);
+      
+      if(rU && (rU.status === 401 || rU.status === 403)){
+        console.error("❌ [CBS] Firebase recusou a leitura (401/403). Verifique as Regras do Firebase e se a Chave Secreta bate.");
+        window.__lastPullOK = null;
+        if(!silent) toast('Erro 401: Verifique as regras do Firebase.', 'err');
+        updateBarRender();
+        return false;
+      }
+
+      const uRaw=rU&&rU.ok?await rU.json().catch(()=>null):null;
+      const sRaw=rS&&rS.ok?await rS.json().catch(()=>null):null;
+      
+      if(uRaw){
+        const decU=uRaw.cipher?decryptVaultPayload(uRaw.cipher,vKey):uRaw;
+        if(Array.isArray(decU))remoteUsers=decU;
+        else if(decU&&Array.isArray(decU.usuarios)){
+          remoteUsers=decU.usuarios;
+          remoteDeleted=Array.isArray(decU.deletedUsers)?decU.deletedUsers:[];
+        }
+      }
+      if(sRaw)remoteSheets=sRaw.cipher?decryptVaultPayload(sRaw.cipher,vKey):sRaw;
+    }else{
+      const rFull=await fetchWithTimeout(base+tsParam,{cache:'no-store'},3500);
+      if(rFull && (rFull.status === 401 || rFull.status === 403)){
+         console.error("❌ [CBS] Firebase recusou (401/403).");
+         window.__lastPullOK = null;
+         updateBarRender();
+         return false;
+      }
+      const fullRaw=rFull&&rFull.ok?await rFull.json().catch(()=>null):null;
+      const full=fullRaw&&fullRaw.cipher?decryptVaultPayload(fullRaw.cipher,vKey):fullRaw;
+      if(full){remoteUsers=full.usuarios;remoteDeleted=full.deletedUsers||[];remoteSheets=full}
+    }
+  }catch(e){
+    console.warn('[CBS] pull falhou:',e);
+    window.__lastPullOK = null;
+    updateBarRender();
+    return false;
+  }
+
+  let updated=false;
+  if(remoteDeleted.length){
+    DB.deletedUsers=[...new Set([...(DB.deletedUsers||[]),...remoteDeleted])];
+  }
+  if(Array.isArray(remoteUsers)&&remoteUsers.length){
+    const beforeJSON=JSON.stringify(DB.usuarios);
+    DB.usuarios=mergeUsersVault(DB.usuarios,remoteUsers);
+    if(JSON.stringify(DB.usuarios)!==beforeJSON)updated=true;
+  }
+  if(remoteSheets){
+    const beforeDbs=JSON.stringify(DB.declaracoes);
+    const beforeAut=JSON.stringify(DB.autorizacoes);
+    const bestDbs=pickBestDataset([DB,remoteSheets],'dbs');
+    const bestAut=pickBestDataset([DB,remoteSheets],'aut');
+    
+    if(bestDbs.records.length>0 && bestDbs.timestamp !== DB.lastUpdate.dbs) {
+        DB.declaracoes=bestDbs.records;DB.lastUpdate.dbs=bestDbs.timestamp;DB.lastFiles.dbs=bestDbs.fileMeta;
+    }
+    if(bestAut.records.length>0 && bestAut.timestamp !== DB.lastUpdate.aut) {
+        DB.autorizacoes=bestAut.records;DB.lastUpdate.aut=bestAut.timestamp;DB.lastFiles.aut=bestAut.fileMeta;
+    }
+
+    if(JSON.stringify(DB.declaracoes)!==beforeDbs || JSON.stringify(DB.autorizacoes)!==beforeAut) {
+        updated=true;
+    }
+  }
+  
+  if(updated){
+    await saveLocalOnly();
+    refreshActiveScreen();
+    if(!silent)toast('Sincronizado com a nuvem!');
+  }
+  window.__lastPullOK = new Date().toISOString();
+  console.log('[CBS] pull OK em', window.__lastPullOK, 'updated=', updated);
+  updateBarRender();
+  return true;
+}
+
+// ===== WEBSOCKET EM TEMPO REAL =====
+let conexaoUsuarios = null;
+let conexaoPlanilhas = null;
+
+function iniciarTempoReal(){
+  const base = getCloudBaseUrl();
+  const vKey = getCloudVaultKey();
+  if(!base || !vKey || !base.includes('firebase')) return;
+
+  if(conexaoUsuarios) conexaoUsuarios.close();
+  if(conexaoPlanilhas) conexaoPlanilhas.close();
+
+  console.log("🚀 [CBS] Conectando em Tempo Real ao Firebase...");
+
+  conexaoUsuarios = new EventSource(`${base}/vaults/${vKey}/cbs_users_enc.json`);
+  conexaoUsuarios.addEventListener('put', async (e) => {
+    try {
+      const payload = JSON.parse(e.data);
+      if(payload && payload.data && payload.data.cipher){
+        const dec = decryptVaultPayload(payload.data.cipher, vKey);
+        if(dec && dec.usuarios){
+          const before = JSON.stringify(DB.usuarios);
+          DB.usuarios = mergeUsersVault(DB.usuarios, dec.usuarios);
+          if(JSON.stringify(DB.usuarios) !== before) {
+            await saveLocalOnly();
+            refreshActiveScreen();
+            console.log("⚡ [CBS] Usuários atualizados em tempo real!");
+          }
+        }
+      }
+    } catch(err) { console.warn("Erro websocket user", err); }
+  });
+
+  conexaoPlanilhas = new EventSource(`${base}/vaults/${vKey}/cbs_sheets_enc.json`);
+  conexaoPlanilhas.addEventListener('put', async (e) => {
+    try {
+      const payload = JSON.parse(e.data);
+      if(payload && payload.data && payload.data.cipher){
+        const dec = decryptVaultPayload(payload.data.cipher, vKey);
+        if(dec && dec.declaracoes){
+          const beforeDbs = JSON.stringify(DB.declaracoes);
+          const beforeAut = JSON.stringify(DB.autorizacoes);
+          
+          DB.declaracoes = dec.declaracoes;
+          DB.autorizacoes = dec.autorizacoes;
+          DB.lastUpdate = dec.lastUpdate || DB.lastUpdate;
+          DB.lastFiles = dec.lastFiles || DB.lastFiles;
+          
+          if(JSON.stringify(DB.declaracoes) !== beforeDbs || JSON.stringify(DB.autorizacoes) !== beforeAut) {
+            await saveLocalOnly();
+            refreshActiveScreen();
+            console.log("⚡ [CBS] Planilhas atualizadas em tempo real!");
+            if(currentUser) toast('Sincronizado em tempo real!', 'ok');
+          }
+        }
+      }
+    } catch(err) { console.warn("Erro websocket sheets", err); }
+  });
+}
+// ===================================
+
+function refreshActiveScreen(){
+  if(!currentUser)return;
+  const updatedMe=DB.usuarios.find(u=>u.email.toLowerCase()===currentUser.email.toLowerCase());
+  if(updatedMe){
+    currentUser=updatedMe;
+    saveSignedSession(currentUser);
+    $('#userName').textContent=currentUser.name||vendName(currentUser.email);
+    $('#userRole').textContent=currentUser.role==='admin'?'Gerencial':currentUser.role==='gerente'?'Gerente':'Vendedor';
+    $('#userAvatar').textContent=(currentUser.name||currentUser.email)[0].toUpperCase();
+    $$('.admin-only').forEach(el=>el.style.display=currentUser.role==='admin'?'':'none');
+  }
+  populateYearSelects();
+  updateBarRender();
+  const activeBtn=$('.nav-item.active[data-view]');
+  const activeView=activeBtn?activeBtn.dataset.view:'dashboard';
+  if(activeView==='dashboard')renderDashboard();
+  if(activeView==='records')renderTable();
+  if(activeView==='exercicio')renderExcTable();
+  if(activeView==='unified')renderUnified();
+  if(activeView==='users')renderUsers();
+}
+
+window.exportEmbeddedHTML=async function(){
+  try{
+    if(getCloudBaseUrl())await pushToCloud('all');
+    const snapshotData={
+      exportedAt:new Date().toISOString(),
+      usuarios:DB.usuarios,
+      deletedUsers:DB.deletedUsers||[],
+      declaracoes:DB.declaracoes,
+      autorizacoes:DB.autorizacoes,
+      config:DB.config,
+      lastUpdate:DB.lastUpdate,
+      lastFiles:DB.lastFiles
+    };
+    const encryptedString=encryptVaultPayload(snapshotData);
+    const dataScript=document.getElementById('cbs-embedded-data');
+    if(dataScript){dataScript.textContent=encryptedString}
+    const clone=document.documentElement.cloneNode(true);
+    const cLogin=clone.querySelector('#loginView');
+    const cApp=clone.querySelector('#appView');
+    const cSb=clone.querySelector('#sidebar');
+    const cBd=clone.querySelector('#sidebarBackdrop');
+    if(cLogin)cLogin.classList.remove('hidden');
+    if(cApp)cApp.classList.add('hidden');
+    if(cSb)cSb.classList.remove('open');
+    if(cBd)cBd.classList.remove('open');
+    const cEmail=clone.querySelector('#loginEmail');
+    const cPass=clone.querySelector('#loginPass');
+    if(cEmail)cEmail.value='';
+    if(cPass)cPass.value='';
+    ['#modalRoot','#toastRoot','#tbodyRec','#excBody','#uniBody','#tbodyUsers','#dashPipeline','#dashVendBody','#dashAlertBody'].forEach(sel=>{const el=clone.querySelector(sel);if(el)el.innerHTML=''});
+    [['#boxVend','chVend'],['#boxStatus','chStatus'],['#boxMes','chMes'],['#boxLeadTime','chLeadTime'],['#boxBlind','chBlind'],['#boxModelos','chModelos'],['#boxCli','chCli'],['#boxExcStatus','chExcStatus']].forEach(([boxSel,cId])=>{const box=clone.querySelector(boxSel);if(box)box.innerHTML='<canvas id="'+cId+'"></canvas>'});
+    const finalHtml='<!DOCTYPE html>\n'+clone.outerHTML;
+    const blob=new Blob([finalHtml],{type:'text/html;charset=utf-8'});
+    const url=URL.createObjectURL(blob);
+    const a=document.createElement('a');
+    a.href=url;
+    a.download='index.html';
+    a.click();
+    URL.revokeObjectURL(url);
+    toast('index.html gerado com base criptografada e perfis salvos!');
+  }catch(e){console.error(e);toast('Erro ao gerar HTML criptografado.','err')}
+};
+
+window.testCloudConnection = async function(){
+  const base = getCloudBaseUrl();
+  if(!base){ toast('❌ Cofre Nuvem NÃO configurado neste aparelho. Abra 🔐 Cofre Nuvem.','err'); return; }
+  if(!/firebaseio\.com|firebasedatabase\.app/.test(base)){
+    toast('❌ URL não parece Firebase RTDB. Deve terminar em firebaseio.com ou firebasedatabase.app','err');
+    return;
+  }
+  toast('🔍 Testando conexão com Firebase...');
+  try{
+    const url = getCloudEndpoint('cbs_users_enc') + '?t=' + Date.now();
+    const r = await fetchWithTimeout(url, {cache:'no-store'}, 6000);
+    if(!r){ toast('❌ Timeout. Verifique internet ou URL.','err'); return; }
+    if(r.status === 401 || r.status === 403){
+      toast('❌ Firebase recusou (' + r.status + '). Regras (Rules) do Firebase estão bloqueando. Cole as regras do Cofre.','err');
+      return;
+    }
+    if(!r.ok){ toast('❌ HTTP ' + r.status + ' — URL provavelmente errada.','err'); return; }
+    toast('✅ Firebase respondeu OK. Conexão e regras estão corretas.');
+    console.log('[CBS] teste conexão OK. Body:', await r.text());
+  }catch(e){
+    toast('❌ Erro: ' + e.message, 'err');
+  }
+};
+
+window.exportDatabaseJSON=function(){const snapshotData={exportedAt:new Date().toISOString(),usuarios:DB.usuarios,deletedUsers:DB.deletedUsers||[],declaracoes:DB.declaracoes,autorizacoes:DB.autorizacoes,config:DB.config,lastUpdate:DB.lastUpdate,lastFiles:DB.lastFiles};const blob=new Blob([JSON.stringify(snapshotData)],{type:'application/json;charset=utf-8'});const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download='cbs_database_backup.json';a.click();URL.revokeObjectURL(url);toast('Backup exportado!')};
+async function handleRestoreDatabaseJSON(file){if(!file)return;const reader=new FileReader();reader.onload=async e=>{try{const parsed=decryptVaultPayload(e.target.result);if(!parsed||(!Array.isArray(parsed.declaracoes)&&!Array.isArray(parsed.autorizacoes))){toast('Arquivo JSON inválido.','err');return}if(Array.isArray(parsed.declaracoes))DB.declaracoes=parsed.declaracoes;if(Array.isArray(parsed.autorizacoes))DB.autorizacoes=parsed.autorizacoes;if(Array.isArray(parsed.usuarios))DB.usuarios=mergeUsersVault(DB.usuarios,parsed.usuarios);if(parsed.lastUpdate)DB.lastUpdate={...DB.lastUpdate,...parsed.lastUpdate};if(parsed.lastFiles)DB.lastFiles={...DB.lastFiles,...parsed.lastFiles};await saveDB('all');refreshActiveScreen();toast('Base de dados restaurada e salva com sucesso!')}catch(err){toast('Erro ao ler arquivo JSON.','err')}};reader.readAsText(file)}
+
+function generateRandomVaultKey(){const chars='ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789';let res='CBS_VAULT_';for(let i=0;i<24;i++)res+=chars.charAt(Math.floor(Math.random()*chars.length));return res}
+window.openCloudConfigModal=function(){const curUrl=getCloudBaseUrl();const curKey=getCloudVaultKey()||generateRandomVaultKey();openModal('<div class="modal-head"><h3>🔐 Cofre Privado na Nuvem (Sincronização 100% Online)</h3><button class="modal-close" onclick="closeModal()">✕</button></div><div class="modal-body"><p style="font-size:11.5px;color:var(--text2);line-height:1.5;margin-bottom:12px">Com o <b>Cofre na Nuvem (Firebase)</b> ativo, qualquer senha alterada no celular, promoção de Gerente ou planilha importada atualiza <b>instantaneamente em todos os aparelhos</b>.</p><div class="fg"><label>1. URL do Firebase Realtime Database</label><input type="url" id="inpCloudUrl" placeholder="https://seu-projeto-default-rtdb.firebaseio.com" value="'+esc(curUrl)+'"></div><div class="fg"><label>2. Chave Secreta do Cofre (Token Privado da Empresa)</label><div style="display:flex;gap:6px"><input type="text" id="inpVaultKey" class="mono" value="'+esc(curKey)+'" oninput="updateFirebaseRulesPreview()"><button type="button" class="btn btn-ghost btn-sm" id="btnGenNewKey">Gerar Nova</button></div></div><div class="fg" style="margin-top:12px"><label>3. Regra de Bloqueio para colar na aba "Regras (Rules)" do Firebase:</label><pre id="firebaseRulesPre" class="mono" style="background:var(--surface2);border:1px solid var(--border);padding:10px;border-radius:8px;font-size:10.5px;overflow-x:auto;user-select:all"></pre></div></div><div class="modal-foot"><button class="btn btn-ghost" onclick="closeModal()">Cancelar</button><button class="btn btn-primary" id="btnSaveCloudUrl">Salvar Cofre e Sincronizar Agora</button></div>',false,'narrow');window.updateFirebaseRulesPreview=function(){const k=($('#inpVaultKey').value||'').trim().replace(/[^a-zA-Z0-9_-]/g,'')||'CHAVE_SECRETA';$('#firebaseRulesPre').textContent='{\n  "rules": {\n    ".read": false,\n    ".write": false,\n    "vaults": {\n      "'+k+'": {\n        ".read": true,\n        ".write": true\n      }\n    }\n  }\n}'};$('#btnGenNewKey').onclick=()=>{document.getElementById('inpVaultKey').value=generateRandomVaultKey();updateFirebaseRulesPreview()};updateFirebaseRulesPreview();$('#btnSaveCloudUrl').onclick=async()=>{const val=$('#inpCloudUrl').value.trim().replace(/\/+$/,'');const vKey=$('#inpVaultKey').value.trim().replace(/[^a-zA-Z0-9_-]/g,'');DB.config.cloudUrl=val;DB.config.vaultKey=vKey;try{localStorage.setItem(CLOUD_CFG_KEY,val);localStorage.setItem(CLOUD_SECRET_KEY,vKey)}catch(e){}await saveLocalOnly();closeModal();if(val){const ok=await pushToCloud('all');if(ok){toast('Cofre privado conectado! Todos os aparelhos sincronizados!');iniciarTempoReal()}else toast('Salvo! Publique as Regras no Firebase para liberar a sincronização.','err')}else{toast('Nuvem desativada.')}updateBarRender()}};
+
+function getDbsDates(r,field){if(!r)return[];if(field)return r[field]?[r[field]]:[];return[r.autorizacao,r.solicitacaoTermo,r.prazoTermo,r.emissaoTermo,r.engenhariaAss,r.procAss,r.sicovabEnvio,r.prazoEmissaoDB,r.emissaoDB].filter(Boolean)}
+function getExcDates(r,field){if(!r)return[];if(field)return r[field]?[r[field]]:[];return[r.dataColeta,r.envioSicovab,r.prazoEmissao,r.prazo9dias,r.dtaPrev07,r.dtaPrev09,r.dataEmissao].filter(Boolean)}
+function getUniDates(r,field){if(!r)return[];if(field==='emissaoDB')return[r.dbs&&r.dbs.emissaoDB].filter(Boolean);if(field==='prazoEmissao')return[r.dbs&&r.dbs.prazoEmissaoDB,r.aut&&r.aut.prazoEmissao].filter(Boolean);if(field==='sicovab')return[r.dbs&&r.dbs.sicovabEnvio,r.aut&&r.aut.envioSicovab].filter(Boolean);if(field==='autorizacao')return[r.dbs&&r.dbs.autorizacao,r.aut&&r.aut.dataEmissao].filter(Boolean);if(field==='emissaoTermo')return[r.dbs&&r.dbs.emissaoTermo].filter(Boolean);return[...getDbsDates(r.dbs,''),...getExcDates(r.aut,'')]}
+function matchTemporal(dates,state){if(!state.date&&!state.month&&!state.year&&!state.from&&!state.to)return true;const valid=(dates||[]).filter(d=>typeof d==='string'&&d.length>=10);if(!valid.length)return false;return valid.some(d=>{const iso=d.slice(0,10);if(state.date&&iso!==state.date)return false;if(state.month&&iso.slice(5,7)!==state.month)return false;if(state.year&&iso.slice(0,4)!==state.year)return false;if(state.from&&iso<state.from)return false;if(state.to&&iso>state.to)return false;return true})}
+function populateYearSelects(){const years=new Set(['2024','2025','2026','2027']);(DB.declaracoes||[]).forEach(r=>getDbsDates(r,'').forEach(d=>{if(d&&d.length>=4)years.add(d.slice(0,4))}));(DB.autorizacoes||[]).forEach(r=>getExcDates(r,'').forEach(d=>{if(d&&d.length>=4)years.add(d.slice(0,4))}));const sorted=[...years].filter(y=>/^\d{4}$/.test(y)).sort((a,b)=>b.localeCompare(a));$$('.year-select').forEach(sel=>{const cur=sel.value;sel.innerHTML='<option value="">Ano: todos</option>'+sorted.map(y=>`<option value="${y}">${y}</option>`).join('');sel.value=cur})}
+
+function ensureAdmin(){
+  const existing=DB.usuarios.find(u=>u.email.toLowerCase()==='admin@conceptbesafe.com.br');
+  if(!existing){
+    DB.usuarios.push({email:'admin@conceptbesafe.com.br',name:'Administrador',pass:ADMIN_DEFAULT_HASH,role:'admin',team:[],mustChange:false,createdAt:'2025-01-01T00:00:00.000Z',passwordLastChanged:null,updatedAt:null});
+  }else{
+    existing.role='admin';
+    existing.mustChange=false;
+  }
+}
+function ensureVendedorUser(rawVend){
+  if(!rawVend)return;
+  const v=String(rawVend).trim();
+  if(!v||v==='—'||v==='-')return;
+  if(DB.usuarios.some(u=>matchVendorIdentity(v,u)))return;
+  const isEmail=v.includes('@');
+  const email=isEmail?v.toLowerCase():(v.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]+/g,'.').replace(/^\.+|\.+$/g,'')+'@conceptbesafe.com.br');
+  if((DB.deletedUsers||[]).includes(email))return;
+  if(!DB.usuarios.some(u=>u.email.toLowerCase()===email)){
+    DB.usuarios.push({email,name:isEmail?vendName(email).replace(/\./g,' '):v,pass:DEFAULT_HASH,role:'vendedor',team:[],mustChange:true,createdAt:new Date().toISOString(),passwordLastChanged:null,updatedAt:null});
+  }
+}
+
+function makeSessionSignature(user){return hash(user.email.toLowerCase()+'|'+user.pass+'|'+CIPHER_SECRET)}
+function saveSignedSession(user){const payload={email:user.email.toLowerCase(),sig:makeSessionSignature(user),ts:Date.now()};try{sessionStorage.setItem(SES_KEY,JSON.stringify(payload))}catch(e){}try{localStorage.setItem(SES_KEY,JSON.stringify(payload))}catch(e){}}
+function verifySignedSession(){try{const raw=sessionStorage.getItem(SES_KEY)||localStorage.getItem(SES_KEY);if(!raw)return null;const parsed=JSON.parse(raw);if(!parsed||!parsed.email||!parsed.sig||!parsed.ts)return null;if(Date.now()-parsed.ts>SESSION_TIMEOUT_MS){localStorage.removeItem(SES_KEY);sessionStorage.removeItem(SES_KEY);return null}const u=DB.usuarios.find(x=>x.email.toLowerCase()===parsed.email.toLowerCase());if(!u)return null;if(makeSessionSignature(u)!==parsed.sig)return null;return u}catch(e){return null}}
+function resetInactivityWatchdog(){if(!currentUser)return;saveSignedSession(currentUser);clearTimeout(inactivityTimer);inactivityTimer=setTimeout(()=>{if(currentUser){logout();toast('Sessão encerrada por inatividade para sua segurança.','err')}},SESSION_TIMEOUT_MS)}
+
+function passVariants(p){
+  const raw=String(p==null?'':p);
+  const clean=raw.trim();
+  const variants=[clean];
+  if(clean.length>0)variants.push(clean[0].toLowerCase()+clean.slice(1));
+  variants.push(clean.toLowerCase());
+  const noSpace=clean.replace(/\s+/g,'');
+  if(noSpace&&noSpace!==clean)variants.push(noSpace);
+  return[...new Set(variants)];
+}
+function userPassMatches(u,passRaw){
+  if(!u||!u.pass)return false;
+  const vs=passVariants(passRaw);
+  for(const v of vs){if(u.pass===hash(v))return true}
+  if(u.mustChange){for(const v of vs){if(v==='123456')return true}}
+  return false;
+}
+function findLoginCandidates(e){
+  return DB.usuarios.filter(x=>
+    x.email.toLowerCase()===e||
+    vendName(x.email).toLowerCase()===e||
+    normIdentity(x.name)===normIdentity(e)
+  ).sort((a,b)=>(ROLE_RANK[b.role]||1)-(ROLE_RANK[a.role]||1));
+}
+function tryLogin(emailRaw,passRaw){
+  try{localStorage.removeItem(LOCKOUT_KEY)}catch(e){}
+  const e=String(emailRaw||'').trim().toLowerCase();
+  const pClean=String(passRaw||'').trim();
+
+  if(!e||!pClean){
+    return{ok:false,msg:'Preencha o e-mail e a senha.'};
+  }
+
+  if(e==='admin@conceptbesafe.com.br'||e==='admin'){
+    ensureAdmin();
+    const adminUser=DB.usuarios.find(x=>x.email.toLowerCase()==='admin@conceptbesafe.com.br');
+    const isAdminPass=(pClean==='admin123'||userPassMatches(adminUser,passRaw));
+    if(isAdminPass&&adminUser){
+      adminUser.role='admin';
+      adminUser.mustChange=false;
+      currentUser=adminUser;
+      saveSignedSession(currentUser);
+      resetInactivityWatchdog();
+      return{ok:true,mustChange:false};
+    }
+  }
+
+  const candidates=findLoginCandidates(e);
+  const u=candidates.find(x=>userPassMatches(x,passRaw));
+  if(!u){
+    return{ok:false,msg:'E-mail ou senha incorretos.'};
+  }
+  currentUser=u;
+  saveSignedSession(u);
+  resetInactivityWatchdog();
+  return{ok:true,mustChange:u.mustChange===true};
+}
+
+async function tryCloudLogin(emailRaw,passRaw){
+  const base=getCloudBaseUrl();
+  if(!base)return null;
+  const vKey=getCloudVaultKey();
+  const e=String(emailRaw||'').trim().toLowerCase();
+  try{
+    const isFirebase=base.includes('firebaseio.com')||base.includes('firebasedatabase.app');
+    let remoteUsers=null;
+    const tsParam='?t='+Date.now();
+    if(isFirebase){
+      const r=await fetchWithTimeout(getCloudEndpoint('cbs_users_enc')+tsParam,{cache:'no-store'},4000);
+      const raw=r&&r.ok?await r.json().catch(()=>null):null;
+      const dec=raw&&raw.cipher?decryptVaultPayload(raw.cipher,vKey):raw;
+      if(Array.isArray(dec))remoteUsers=dec;
+      else if(dec&&Array.isArray(dec.usuarios))remoteUsers=dec.usuarios;
+    }else{
+      const r=await fetchWithTimeout(base+tsParam,{cache:'no-store'},4000);
+      const raw=r&&r.ok?await r.json().catch(()=>null):null;
+      const dec=raw&&raw.cipher?decryptVaultPayload(raw.cipher,vKey):raw;
+      if(dec&&Array.isArray(dec.usuarios))remoteUsers=dec.usuarios;
+    }
+    if(!Array.isArray(remoteUsers)||!remoteUsers.length)return null;
+    const candidates=remoteUsers.filter(x=>
+      String(x.email||'').trim().toLowerCase()===e||
+      vendName(x.email).toLowerCase()===e||
+      normIdentity(x.name)===normIdentity(e)
+    ).sort((a,b)=>(ROLE_RANK[b.role]||1)-(ROLE_RANK[a.role]||1));
+    return candidates.find(x=>userPassMatches(x,passRaw))||null;
+  }catch(err){return null}
+}
+
+function logout(){currentUser=null;clearTimeout(inactivityTimer);toggleMobileSidebar(false);try{localStorage.removeItem(SES_KEY)}catch(e){}try{sessionStorage.removeItem(SES_KEY)}catch(e){};$('#appView').classList.add('hidden');$('#loginView').classList.remove('hidden');$('#loginPass').value=''}
+function recStatus(r){if(r.emissaoDB&&r.emissaoDB!=='')return'emitido';if(r.prazoEmissaoDB&&r.prazoEmissaoDB!==''&&r.prazoEmissaoDB<todayISO())return'atrasado';return'pendente'}
+function normIdentity(s){return String(s||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]/g,'')}
+
+function matchVendorIdentity(recordVendorRaw,userOrIdentifier){
+  const rv=String(recordVendorRaw||'').trim();
+  if(!rv)return false;
+  const rvLower=rv.toLowerCase();
+  const rvPrefix=vendName(rvLower);
+  const rvNorm=normIdentity(rv);
+  const rvPrefixNorm=normIdentity(rvPrefix);
+  let uObj=null;
+  if(typeof userOrIdentifier==='object'&&userOrIdentifier!==null){uObj=userOrIdentifier}
+  else{
+    const idStr=String(userOrIdentifier||'').trim().toLowerCase();
+    uObj=DB.usuarios.find(u=>u.email.toLowerCase()===idStr||normIdentity(u.name)===normIdentity(idStr))||{email:idStr,name:idStr};
+  }
+  if(!uObj)return false;
+  const uEmail=String(uObj.email||'').trim().toLowerCase();
+  const uName=normIdentity(uObj.name||'');
+  const uPrefix=vendName(uEmail);
+  const uPrefixNorm=normIdentity(uPrefix);
+  if(uEmail&&rvLower===uEmail)return true;
+  if(uName&&rvNorm===uName)return true;
+  if(uPrefixNorm&&rvPrefixNorm===uPrefixNorm)return true;
+  if(uPrefixNorm&&uPrefixNorm.length>=3&&(rvNorm.includes(uPrefixNorm)||uPrefixNorm.includes(rvPrefixNorm&&rvPrefixNorm.length>=3?rvPrefixNorm:'___')))return true;
+  if(uName&&uName.length>=3&&(rvNorm.includes(uName)||uName.includes(rvPrefixNorm&&rvPrefixNorm.length>=3?rvPrefixNorm:'___')))return true;
+  return false;
+}
+function vendMatchExc(r,emailOrUser){return matchVendorIdentity(r&&r.vendedor,emailOrUser)}
+
+function addExcDate(){const input=$('#fExcDateInput');const d=input.value;if(!d){toast('Selecione uma data','err');return}if(!excState.dates)excState.dates=[];if(excState.dates.includes(d)){toast('Data já adicionada','err');return}excState.dates.push(d);input.value='';excState.page=1;renderExcDateTags();renderExcTable()}
+window.removeExcDate=function(i){excState.dates.splice(i,1);excState.page=1;renderExcDateTags();renderExcTable()};
+function renderExcDateTags(){const container=$('#fExcDateTags');if(!excState.dates||excState.dates.length===0){container.innerHTML='<span style="color:var(--muted);font-size:10px">Nenhuma data selecionada</span>';return}container.innerHTML=excState.dates.map((d,i)=>`<span class="date-tag">${fmtDate(d)}<span class="rm" onclick="removeExcDate(${i})">✕</span></span>`).join('')}
+
+function parseAutorizacaoFile(rows){let hi=-1;for(let i=0;i<Math.min(rows.length,60);i++){const j=(rows[i]||[]).map(c=>String(c||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'')).join('|');if(j.includes('cliente')&&(j.includes('exercito')||j.includes('vendedor')||j.includes('os'))){hi=i;break}}if(hi<0)return[];const hdr=rows[hi].map(h=>String(h||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim());const idx=(names)=>{for(const n of names){const i=hdr.findIndex(h=>h.includes(n));if(i>=0)return i}return-1};const iOs=idx(['os'])>=0?idx(['os']):0;const iCliente=idx(['cliente']);const iColeta=idx(['coleta','data coleta']);const iVend=idx(['vendedor','gestor comercial']);const iExc=idx(['exercito']);const iPed=idx(['pedido compra','pedido','n pedido']);const iModelo=idx(['modelo','veiculo']);const iChassi=idx(['chassi','chassis']);const iSicovab=idx(['envio sicovab','sicovab']);const iPrazoEmi=idx(['prazo emissao']);const iPrazo9=idx(['prazo 09','prazo 9','9 dias']);const iPrev07=idx(['prev 07','dta prev 07','07 dias']);const iPrev09=idx(['prev 09','dta prev 09','09 dias']);const iObs=idx(['observacao','observacoes']);const iDataEmi=idx(['data emissao']);const iDias=idx(['qtd dias','dias']);const recs=[];for(let i=hi+1;i<rows.length;i++){const row=rows[i];if(!row||!row.length)continue;const os=String(row[iOs]||'').trim();if(!os||isNaN(parseInt(os)))continue;const cliente=iCliente>=0?String(row[iCliente]||''):'';const vendedor=iVend>=0?String(row[iVend]||''):'';if(!cliente&&!vendedor)continue;const rowText=JSON.stringify(row);if(rowText.includes('Threaded comment')||rowText.includes('tc={'))continue;recs.push({os,cliente,dataColeta:parseDate(iColeta>=0?row[iColeta]:null),vendedor:vendedor.trim(),exercito:iExc>=0?String(row[iExc]||''):'',pedidoCompra:iPed>=0?String(row[iPed]||''):'',modelo:iModelo>=0?String(row[iModelo]||''):'',chassi:iChassi>=0?String(row[iChassi]||''):'',envioSicovab:parseDate(iSicovab>=0?row[iSicovab]:null),prazoEmissao:parseDate(iPrazoEmi>=0?row[iPrazoEmi]:null),prazo9dias:parseDate(iPrazo9>=0?row[iPrazo9]:null),dtaPrev07:parseDate(iPrev07>=0?row[iPrev07]:null),dtaPrev09:parseDate(iPrev09>=0?row[iPrev09]:null),observacao:iObs>=0?String(row[iObs]||''):'',dataEmissao:parseDate(iDataEmi>=0?row[iDataEmi]:null),dias:iDias>=0&&row[iDias]!=null&&row[iDias]!==''&&!isNaN(Number(row[iDias]))?Number(row[iDias]):null,lastModified:new Date().toISOString(),modifiedBy:'import'})}return recs}
+function handleFileDbs(file){if(!file)return;pendingFileNameDbs=file.name;const reader=new FileReader();reader.onload=e=>{try{const wb=XLSX.read(new Uint8Array(e.target.result),{type:'array',cellDates:true});const ws=wb.Sheets[wb.SheetNames[0]];const rows=XLSX.utils.sheet_to_json(ws,{header:1,defval:'',raw:true});let hi=-1;for(let i=0;i<Math.min(rows.length,40);i++){const j=(rows[i]||[]).map(c=>String(c).toLowerCase()).join('|');if((j.includes('veículo')||j.includes('veiculo'))&&j.includes('cliente')&&j.includes('vendedor')){hi=i;break}}if(hi<0){toast('Cabeçalho não encontrado.','err');return}const recs=[];for(let i=hi+1;i<rows.length;i++){const row=rows[i];if(!row||!row.length)continue;const os=String(row[0]||'').trim();if(!os||os==='Dashboard'||os==='---')continue;recs.push({os,veiculo:String(row[1]||''),blindagem:String(row[3]||''),cliente:String(row[9]||''),vendedor:String(row[10]||'').trim(),autorizacao:parseDate(row[4]),solicitacaoTermo:parseDate(row[12]),prazoTermo:parseDate(row[13]),emissaoTermo:parseDate(row[14]),engenhariaAss:parseDate(row[15]),procAss:parseDate(row[16]),diaAss:String(row[17]||''),sicovabEnvio:parseDate(row[18]),prazoEmissaoDB:parseDate(row[19]),emissaoDB:parseDate(row[20]),dias:row[21]!=null&&row[21]!==''?Number(row[21]):null,observacoes:String(row[22]||''),lastModified:new Date().toISOString(),modifiedBy:'import'})}if(!recs.length){toast('Nenhum registro.','err');return}pendingDbs=recs;$('#importPanelDbs').classList.remove('hidden');$('#dropZoneDbs').classList.add('hidden');$('#pvCountDbs').textContent=recs.length+' registros lidos'}catch(err){console.error(err);toast('Erro ao ler.','err')}};reader.readAsArrayBuffer(file)}
+async function doImportDbs(){if(!pendingDbs)return;const count=pendingDbs.length;createBackup('import-dbs');if(importModeDbs==='replace'){DB.declaracoes=pendingDbs}else if(importModeDbs==='merge'){const m=new Map(DB.declaracoes.map(r=>[String(r.os),r]));pendingDbs.forEach(r=>{const k=String(r.os);const existing=m.get(k);if(existing){const manualNotes=existing.manualNotes||'';m.set(k,{...existing,...r,manualNotes,lastModified:new Date().toISOString(),modifiedBy:'import'})}else{m.set(k,{...r,manualNotes:'',lastModified:new Date().toISOString(),modifiedBy:'import'})}});DB.declaracoes=Array.from(m.values())}else{const ex=new Set(DB.declaracoes.map(r=>String(r.os)));pendingDbs.forEach(r=>{if(!ex.has(String(r.os)))DB.declaracoes.push({...r,manualNotes:'',lastModified:new Date().toISOString(),modifiedBy:'import'})})}const vends=[...new Set(DB.declaracoes.map(r=>r.vendedor).filter(Boolean))];vends.forEach(ensureVendedorUser);DB.lastUpdate.dbs=new Date().toISOString();DB.lastFiles.dbs={name:pendingFileNameDbs||'Sicovab_DBs.xlsx',count:DB.declaracoes.length};pendingDbs=null;pendingFileNameDbs='';$('#importPanelDbs').classList.add('hidden');$('#dropZoneDbs').classList.remove('hidden');$('#fileInputDbs').value='';await saveDB('all');populateYearSelects();updateBarRender();renderDashboard();toast(count+' D.Bs importados e sincronizados!')}
+function handleFileAut(file){if(!file)return;pendingFileNameAut=file.name;const reader=new FileReader();reader.onload=e=>{try{const wb=XLSX.read(new Uint8Array(e.target.result),{type:'array',cellDates:true});const ws=wb.Sheets[wb.SheetNames[0]];const rows=XLSX.utils.sheet_to_json(ws,{header:1,defval:'',raw:true});const recs=parseAutorizacaoFile(rows);if(!recs.length){toast('Nenhum registro válido.','err');return}pendingAut=recs;$('#importPanelAut').classList.remove('hidden');$('#dropZoneAut').classList.add('hidden');$('#pvCountAut').textContent=recs.length+' autorizações pendentes lidas'}catch(err){console.error(err);toast('Erro ao ler.','err')}};reader.readAsArrayBuffer(file)}
+async function doImportAut(){if(!pendingAut)return;const count=pendingAut.length;createBackup('import-aut');if(importModeAut==='replace'){DB.autorizacoes=pendingAut}else if(importModeAut==='merge'){const m=new Map(DB.autorizacoes.map(r=>[String(r.os),r]));pendingAut.forEach(r=>{const k=String(r.os);const existing=m.get(k);if(existing){const manualNotes=existing.manualNotes||'';m.set(k,{...existing,...r,manualNotes,lastModified:new Date().toISOString(),modifiedBy:'import'})}else{m.set(k,{...r,manualNotes:'',lastModified:new Date().toISOString(),modifiedBy:'import'})}});DB.autorizacoes=Array.from(m.values())}else{const ex=new Set(DB.autorizacoes.map(r=>String(r.os)));pendingAut.forEach(r=>{if(!ex.has(String(r.os)))DB.autorizacoes.push({...r,manualNotes:'',lastModified:new Date().toISOString(),modifiedBy:'import'})})}const vends=[...new Set(DB.autorizacoes.map(r=>r.vendedor).filter(Boolean))];vends.forEach(ensureVendedorUser);DB.lastUpdate.aut=new Date().toISOString();DB.lastFiles.aut={name:pendingFileNameAut||'Autorizacoes.xlsx',count:DB.autorizacoes.length};pendingAut=null;pendingFileNameAut='';$('#importPanelAut').classList.add('hidden');$('#dropZoneAut').classList.remove('hidden');$('#fileInputAut').value='';await saveDB('all');populateYearSelects();updateBarRender();toast(count+' autorizações pendentes importadas e sincronizadas!')}
+
+function exportExcel(){const recs=getFiltered();if(!recs.length){toast('Nada para exportar.','err');return}const data=recs.map(r=>({'OS':r.os,'Veículo':r.veiculo,'Blindagem':r.blindagem,'Cliente':r.cliente,'Vendedor':r.vendedor,'Autorização':fmtDate(r.autorizacao),'Emi. Termo':fmtDate(r.emissaoTermo),'Eng. Ass.':fmtDate(r.engenhariaAss),'Proc. Ass.':fmtDate(r.procAss),'Dia Ass.':r.diaAss,'Sicovab':fmtDate(r.sicovabEnvio),'Prazo D.B':fmtDate(r.prazoEmissaoDB),'Emissão D.B':fmtDate(r.emissaoDB),'Dias':r.dias,'Status':recStatus(r)==='emitido'?'Emitida':recStatus(r)==='atrasado'?'Atrasada':'Pendente','Obs':r.observacoes}));const ws=XLSX.utils.json_to_sheet(data);const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,'Declarações');XLSX.writeFile(wb,'sicovab_dbs_'+todayISO()+'.xlsx');toast('Exportado.')}
+function exportExc(){const recs=visibleExc();if(!recs.length){toast('Nada para exportar.','err');return}const data=recs.map(r=>({'OS':r.os,'Cliente':r.cliente,'Vendedor':r.vendedor,'Modelo':r.modelo,'Status Exército':r.exercito,'Envio Sicovab':fmtDate(r.envioSicovab),'Prazo Emissão':fmtDate(r.prazoEmissao),'Data Emissão':fmtDate(r.dataEmissao),'Dias':r.dias,'Observação':r.observacao}));const ws=XLSX.utils.json_to_sheet(data);const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,'Autorizações');XLSX.writeFile(wb,'autorizacoes_exercito_'+todayISO()+'.xlsx');toast('Exportado.')}
+function exportUnified(){const data=getUnifiedData().map(r=>({'OS':r.os,'Cliente':r.cliente,'Vendedor':r.vendedor,'Veículo':r.veiculo,'D.B Emitida':r.dbs?fmtDate(r.dbs.emissaoDB):'—','D.B Status':r.dbs?recStatus(r.dbs):'—','Aut. Exército':r.aut?fmtDate(r.aut.dataEmissao):'—','Aut. Status':r.aut?'Pendente':'—'}));const ws=XLSX.utils.json_to_sheet(data);const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,'Unificado');XLSX.writeFile(wb,'visao_unificada_'+todayISO()+'.xlsx');toast('Exportado.')}
+function downloadSavedSheet(type){const recs=type==='dbs'?DB.declaracoes:DB.autorizacoes;if(!recs||!recs.length){toast('Nenhuma planilha salva.','err');return}const fileName=type==='dbs'?'sicovab_dbs_salva.xlsx':'autorizacoes_salva.xlsx';const data=recs.map(r=>Object.fromEntries(Object.entries(r).filter(([k])=>!k.startsWith('_'))));const ws=XLSX.utils.json_to_sheet(data);const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,type==='dbs'?'D.Bs':'Autorizações');XLSX.writeFile(wb,fileName);toast('Planilha baixada!')}
+function openModal(html,wide,narrow,noClose){$('#modalRoot').innerHTML='<div class="modal-overlay" id="mOv" '+(noClose?'':'onclick="if(event.target===this)closeModal()"')+'><div class="modal-box '+(wide?'wide':'')+' '+(narrow?'narrow':'')+'">'+html+'</div></div>'}
+function closeModal(){$('#modalRoot').innerHTML=''}
+function toast(msg,type){const el=document.createElement('div');el.className='toast '+(type==='err'?'err':'ok');el.innerHTML='<span class="t-ico">'+(type==='err'?'✕':'✓')+'</span>'+esc(msg);$('#toastRoot').appendChild(el);setTimeout(()=>{el.style.opacity='0';el.style.transition='opacity .3s';setTimeout(()=>el.remove(),300)},3000)}
+
+function openChangePassword(forced){
+  toggleMobileSidebar(false);
+  const t=forced?'Defina sua nova senha':'Alterar senha';
+  openModal('<div class="modal-head"><h3>'+t+'</h3>'+(forced?'':'<button class="modal-close" onclick="closeModal()">✕</button>')+'</div><div class="modal-body"><p style="font-size:12px;color:var(--muted);margin-bottom:14px">'+(forced?'Por segurança, crie uma senha pessoal. Ela ficará salva online para todos os seus aparelhos.':'Digite sua senha atual e escolha uma nova.')+'</p>'+(forced?'':'<div class="fg"><label>Senha atual</label><div class="pass-wrap"><input type="password" id="cpCur" autocapitalize="none" autocorrect="off" spellcheck="false"><button type="button" class="pass-toggle" onclick="togglePassVis(\'cpCur\')">👁</button></div></div>')+'<div class="fg"><label>Nova senha (mín. 6 caracteres)</label><div class="pass-wrap"><input type="password" id="cpNew" autocapitalize="none" autocorrect="off" spellcheck="false"><button type="button" class="pass-toggle" onclick="togglePassVis(\'cpNew\')">👁</button></div></div><div class="fg"><label>Confirmar nova senha</label><div class="pass-wrap"><input type="password" id="cpConf" autocapitalize="none" autocorrect="off" spellcheck="false"><button type="button" class="pass-toggle" onclick="togglePassVis(\'cpConf\')">👁</button></div></div><div id="cpErr" style="color:var(--red);font-size:11px;margin-top:8px;display:none"></div></div><div class="modal-foot">'+(forced?'':'<button class="btn btn-ghost" onclick="closeModal()">Cancelar</button>')+'<button class="btn btn-primary" id="cpSave">Salvar Senha Online</button></div>',false,'narrow',forced);
+  $('#cpSave').onclick=async()=>{
+    const e=$('#cpErr');
+    const btn=$('#cpSave');
+    e.style.display='none';
+    if(!forced){
+      const curVal=($('#cpCur').value||'').trim();
+      const curLow=curVal.length?curVal[0].toLowerCase()+curVal.slice(1):curVal;
+      const isMasterAdmin=(currentUser.email.toLowerCase()==='admin@conceptbesafe.com.br'&&(curVal==='admin123'||curLow==='admin123'));
+      if(!isMasterAdmin&&hash(curVal)!==currentUser.pass&&hash(curLow)!==currentUser.pass){
+        e.textContent='Senha atual incorreta.';e.style.display='block';return;
+      }
+    }
+    const n=($('#cpNew').value||'').trim();
+    const c=($('#cpConf').value||'').trim();
+    if(n.length<6){e.textContent='A nova senha deve ter no mínimo 6 caracteres.';e.style.display='block';return}
+    if(n!==c){e.textContent='As senhas digitadas não conferem.';e.style.display='block';return}
+    btn.disabled=true;
+    btn.textContent='Salvando...';
+    const newHash=hash(n);
+    const nowISO=new Date().toISOString();
+    currentUser.pass=newHash;
+    currentUser.mustChange=false;
+    currentUser.passwordLastChanged=nowISO;
+    currentUser.updatedAt=nowISO;
+    const idx=DB.usuarios.findIndex(u=>u.email.toLowerCase()===currentUser.email.toLowerCase());
+    if(idx>=0){
+      DB.usuarios[idx].pass=newHash;
+      DB.usuarios[idx].mustChange=false;
+      DB.usuarios[idx].passwordLastChanged=nowISO;
+      DB.usuarios[idx].updatedAt=nowISO;
+    }else{
+      DB.usuarios.push({...currentUser});
+    }
+    saveSignedSession(currentUser);
+    await saveDB('users');
+    closeModal();
+    toast('Senha salva e sincronizada em todos os aparelhos!');
+  };
+}
+
+function openDetail(r){const st=recStatus(r);const cell=(k,v,m)=>'<div class="detail-cell"><div class="k">'+k+'</div><div class="v '+(m?'mono ':'')+' '+(v?'':'empty-v')+'">'+(v||'não informado')+'</div></div>';openModal('<div class="modal-head"><h3 class="mono" style="font-size:14px">OS '+esc(r.os||'—')+'</h3><button class="modal-close" onclick="closeModal()">✕</button></div><div class="modal-body"><div class="detail-grid">'+cell('Veículo',esc(r.veiculo))+cell('Blindagem',esc(r.blindagem))+cell('Cliente',esc(r.cliente))+cell('Vendedor',esc(r.vendedor))+cell('Autorização',fmtDate(r.autorizacao),1)+cell('Emissão Termo',fmtDate(r.emissaoTermo),1)+cell('Engenharia Ass.',fmtDate(r.engenhariaAss),1)+cell('Proc. Ass.',fmtDate(r.procAss),1)+cell('Dia Ass.',esc(r.diaAss))+cell('Envio Sicovab',fmtDate(r.sicovabEnvio),1)+cell('Prazo Emissão D.B',fmtDate(r.prazoEmissaoDB),1)+cell('Emissão D.B',fmtDate(r.emissaoDB),1)+cell('Dias',r.dias!=null&&r.dias!==''?String(r.dias):'',1)+cell('Status',st==='emitido'?'Emitida':st==='atrasado'?'Atrasada':'Pendente')+'</div>'+(r.observacoes?'<div style="margin-top:12px;padding:10px;background:var(--surface2);border-radius:8px;font-size:11px"><b>Obs:</b> '+esc(r.observacoes)+'</div>':'')+'</div>',true)}
+function openExcDetail(r){const cell=(k,v,m)=>'<div class="detail-cell"><div class="k">'+k+'</div><div class="v '+(m?'mono ':'')+' '+(v?'':'empty-v')+'">'+(v||'não informado')+'</div></div>';openModal('<div class="modal-head"><h3 class="mono" style="font-size:14px">OS '+esc(r.os||'—')+' — Autorização Pendente</h3><button class="modal-close" onclick="closeModal()">✕</button></div><div class="modal-body"><div class="detail-grid">'+cell('Cliente',esc(r.cliente))+cell('Vendedor',esc(r.vendedor))+cell('Status Exército',esc(r.exercito))+cell('Modelo',esc(r.modelo))+cell('Chassi',esc(r.chassi),1)+cell('Data Coleta',fmtDate(r.dataColeta),1)+cell('Envio Sicovab',fmtDate(r.envioSicovab),1)+cell('Prazo Emissão',fmtDate(r.prazoEmissao),1)+cell('Prazo 9 Dias',fmtDate(r.prazo9dias),1)+cell('Prev. 07 Dias',fmtDate(r.dtaPrev07),1)+cell('Prev. 09 Dias',fmtDate(r.dtaPrev09),1)+cell('Data Emissão',fmtDate(r.dataEmissao),1)+cell('Dias',r.dias!=null&&r.dias!==''?String(r.dias):'',1)+cell('Pedido Compra',esc(r.pedidoCompra))+'</div>'+(r.observacao?'<div style="margin-top:12px;padding:10px;background:var(--surface2);border-radius:8px;font-size:11px"><b>Obs:</b> '+esc(r.observacao)+'</div>':'')+'</div>',true)}
+function openUnifiedDetail(r){const cell=(k,v,m)=>'<div class="detail-cell"><div class="k">'+k+'</div><div class="v '+(m?'mono ':'')+' '+(v?'':'empty-v')+'">'+(v||'não informado')+'</div></div>';let dbsSection='',autSection='';if(r.dbs){dbsSection='<h4 style="margin:16px 0 8px;font-size:13px;color:var(--accent)">📄 Declaração de Blindagem</h4><div class="detail-grid">'+cell('Veículo',esc(r.dbs.veiculo))+cell('Blindagem',esc(r.dbs.blindagem))+cell('Autorização',fmtDate(r.dbs.autorizacao),1)+cell('Emissão Termo',fmtDate(r.dbs.emissaoTermo),1)+cell('Envio Sicovab',fmtDate(r.dbs.sicovabEnvio),1)+cell('Prazo D.B',fmtDate(r.dbs.prazoEmissaoDB),1)+cell('Emissão D.B',fmtDate(r.dbs.emissaoDB),1)+cell('Dias',r.dbs.dias!=null?String(r.dbs.dias):'',1)+'</div>'}if(r.aut){autSection='<h4 style="margin:16px 0 8px;font-size:13px;color:var(--amber)">🛡️ Autorização Pendente</h4><div class="detail-grid">'+cell('Modelo',esc(r.aut.modelo))+cell('Status',esc(r.aut.exercito))+cell('Data Coleta',fmtDate(r.aut.dataColeta),1)+cell('Envio Sicovab',fmtDate(r.aut.envioSicovab),1)+cell('Prazo Emissão',fmtDate(r.aut.prazoEmissao),1)+cell('Data Emissão',fmtDate(r.aut.dataEmissao),1)+cell('Dias',r.aut.dias!=null?String(r.aut.dias):'',1)+cell('Pedido',esc(r.aut.pedidoCompra))+'</div>'}openModal('<div class="modal-head"><h3 class="mono" style="font-size:14px">OS '+esc(r.os)+' — Visão Completa</h3><button class="modal-close" onclick="closeModal()">✕</button></div><div class="modal-body"><div class="detail-grid">'+cell('Cliente',esc(r.cliente))+cell('Vendedor',esc(r.vendedor))+'</div>'+dbsSection+autSection+'</div>',true,'wide')}
+
+function renderUsers(){
+  if(!currentUser||currentUser.role!=='admin')return;
+  const tb=$('#tbodyUsers');
+  tb.innerHTML=DB.usuarios.map((u,i)=>{
+    const dbsMatches=(DB.declaracoes||[]).filter(r=>matchVendorIdentity(r.vendedor,u)).length;
+    const teamHtml=u.role==='gerente'&&u.team&&u.team.length?'<div class="team-list">'+u.team.map(t=>'<span class="team-tag">'+esc(vendName(t))+'</span>').join('')+'</div>':u.role==='gerente'?'<span style="color:var(--green);font-size:9.5px;font-weight:600">Visão Geral (Todos)</span>':'<span class="mono" style="font-size:10px;color:var(--text2)">'+dbsMatches+' D.Bs</span>';
+    const lastChange=u.updatedAt?fmtDateTime(u.updatedAt):(u.passwordLastChanged?fmtDateTime(u.passwordLastChanged):(u.mustChange?'<span style="color:var(--amber)">1º Acesso (123456)</span>':'<span style="color:var(--green)">Ativa</span>'));
+    return'<tr><td><span class="vend-pill"><span class="vend-dot" style="background:'+vendColor(u.email)+'">'+esc((u.name||'?')[0].toUpperCase())+'</span>'+esc(u.name||vendName(u.email))+'</span></td><td class="mono" style="font-size:10px">'+esc(u.email)+'</td><td><span class="role-badge '+u.role+'">'+(u.role==='admin'?'Gerencial':u.role==='gerente'?'Gerente':'Vendedor')+'</span></td><td>'+teamHtml+'</td><td class="mono" style="font-size:9px">'+lastChange+'</td><td style="text-align:right"><button class="btn btn-ghost btn-sm" onclick="editUser('+i+')">Editar</button>'+(u.email.toLowerCase()!=='admin@conceptbesafe.com.br'?'<button class="btn btn-danger btn-sm" onclick="delUser('+i+')">✕</button>':'')+'</td></tr>';
+  }).join('');
+}
+window.delUser=async function(i){
+  const u=DB.usuarios[i];
+  if(!u)return;
+  if(!DB.deletedUsers)DB.deletedUsers=[];
+  DB.deletedUsers.push(u.email.toLowerCase());
+  DB.usuarios.splice(i,1);
+  await saveDB('users');
+  renderUsers();
+  toast('Usuário removido em todos os aparelhos.');
+};
+window.editUser=function(i){openUserForm(DB.usuarios[i],i)};
+
+function openUserForm(existing,idx){
+  const isNew=!existing;
+  const u=existing||{email:'',name:'',pass:'',role:'vendedor',team:[],mustChange:false};
+  const sheetVendors=[...new Set([...(DB.declaracoes||[]).map(r=>r.vendedor),...(DB.autorizacoes||[]).map(r=>r.vendedor)].filter(Boolean))].sort();
+  const vendedores=DB.usuarios.filter(x=>x.role==='vendedor');
+  const allTeamOptions=[...new Set([...vendedores.map(v=>v.email),...sheetVendors])];
+  let teamSection='<div class="fg" id="teamSection" style="display:'+(u.role==='gerente'?'block':'none')+'"><label>Equipe (vendedores que este gerente pode ver — vazio = vê todos)</label><div id="teamChecks" style="max-height:160px;overflow-y:auto">'+allTeamOptions.map(vEmail=>{const uFound=DB.usuarios.find(x=>x.email===vEmail);const label=uFound?(uFound.name||vendName(vEmail)):vendName(vEmail);return'<label class="team-check"><input type="checkbox" value="'+esc(vEmail)+'" '+((u.team||[]).includes(vEmail)?'checked':'')+'> '+esc(label)+' <span class="mono" style="font-size:9px;color:var(--muted)">('+esc(vEmail)+')</span></label>'}).join('')+'</div></div>';
+  openModal('<div class="modal-head"><h3>'+(isNew?'Novo usuário':'Editar usuário')+'</h3><button class="modal-close" onclick="closeModal()">✕</button></div><div class="modal-body"><div class="fg"><label>Nome</label><input id="uName" value="'+esc(u.name||'')+'"></div><div class="fg"><label>E-mail *</label><input id="uEmail" type="email" autocapitalize="none" autocorrect="off" spellcheck="false" value="'+esc(u.email||'')+'" '+(isNew?'':'readonly')+'></div>'+(isNew?'<div class="fg"><label>Senha de acesso *</label><div class="pass-wrap"><input id="uPass" type="text" placeholder="Ex: 123456 ou senha definitiva" autocapitalize="none" autocorrect="off" spellcheck="false"></div></div>':'<div class="fg"><label>Nova senha (deixe vazio para manter a atual)</label><div class="pass-wrap"><input id="uPass" type="text" placeholder="Digite apenas se quiser trocar a senha" autocapitalize="none" autocorrect="off" spellcheck="false"></div></div>')+'<div class="fg"><label>Perfil</label><select id="uRole" onchange="toggleTeam()"><option value="vendedor" '+(u.role==='vendedor'?'selected':'')+'>Vendedor</option><option value="gerente" '+(u.role==='gerente'?'selected':'')+'>Gerente</option><option value="admin" '+(u.role==='admin'?'selected':'')+'>Admin / Gerencial</option></select></div>'+teamSection+'</div><div class="modal-foot"><button class="btn btn-ghost" onclick="closeModal()">Cancelar</button><button class="btn btn-primary" id="suSave">Salvar e Sincronizar</button></div>',false,'wide');
+  window.toggleTeam=function(){const role=$('#uRole').value;const ts=$('#teamSection');if(ts)ts.style.display=role==='gerente'?'block':'none'};
+  $('#suSave').onclick=async()=>{
+    const em=($('#uEmail').value||'').trim().toLowerCase();
+    const passVal=($('#uPass').value||'').trim();
+    if(!em.includes('@')){toast('E-mail inválido','err');return}
+    if(isNew&&DB.usuarios.some(x=>x.email.toLowerCase()===em)){toast('Já existe','err');return}
+    if(isNew&&!passVal){toast('Defina uma senha','err');return}
+    const role=$('#uRole').value;
+    let team=[];
+    if(role==='gerente'){team=[...$('#teamChecks').querySelectorAll('input:checked')].map(cb=>cb.value)}
+    const nowISO=new Date().toISOString();
+    DB.deletedUsers=(DB.deletedUsers||[]).filter(d=>d!==em);
+    if(isNew){
+      DB.usuarios.push({email:em,name:($('#uName').value||'').trim()||vendName(em),pass:hash(passVal),role,team,mustChange:passVal==='123456',createdAt:nowISO,passwordLastChanged:nowISO,updatedAt:nowISO});
+    }else{
+      u.name=($('#uName').value||'').trim()||u.name;
+      u.role=role;
+      u.team=team;
+      u.updatedAt=nowISO;
+      if(passVal){
+        u.pass=hash(passVal);
+        u.mustChange=passVal==='123456';
+        u.passwordLastChanged=nowISO;
+      }
+      DB.usuarios[idx]=u;
+    }
+    await saveDB('users');
+    closeModal();
+    renderUsers();
+    toast('Usuário salvo e sincronizado online!');
+  };
+}
+
+function visibleRecords(){
+  if(!currentUser)return DB.declaracoes||[];
+  if(currentUser.role==='admin')return DB.declaracoes||[];
+  if(currentUser.role==='vendedor')return (DB.declaracoes||[]).filter(r=>matchVendorIdentity(r.vendedor,currentUser));
+  if(currentUser.role==='gerente'){
+    const team=currentUser.team||[];
+    if(!team.length)return DB.declaracoes||[];
+    return (DB.declaracoes||[]).filter(r=>matchVendorIdentity(r.vendedor,currentUser)||team.some(t=>matchVendorIdentity(r.vendedor,t)));
+  }
+  return DB.declaracoes||[];
+}
+function visibleExc(){
+  if(!currentUser)return DB.autorizacoes||[];
+  if(currentUser.role==='admin')return DB.autorizacoes||[];
+  if(currentUser.role==='vendedor')return (DB.autorizacoes||[]).filter(r=>matchVendorIdentity(r.vendedor,currentUser));
+  if(currentUser.role==='gerente'){
+    const team=currentUser.team||[];
+    if(!team.length)return DB.autorizacoes||[];
+    return (DB.autorizacoes||[]).filter(r=>matchVendorIdentity(r.vendedor,currentUser)||team.some(t=>matchVendorIdentity(r.vendedor,t)));
+  }
+  return DB.autorizacoes||[];
+}
+
+function fillFilters(){populateYearSelects();const recs=visibleRecords();const uq=a=>[...new Set(a.filter(Boolean))].sort();const vs=$('#fVend'),cs=$('#fCliente'),bs=$('#fBlind');const cv=tableState.vend,cc=tableState.cli,cb=tableState.blind;vs.innerHTML='<option value="">Vendedor: todos</option>'+uq(recs.map(r=>r.vendedor)).map(v=>'<option value="'+esc(v)+'">'+esc(vendName(v))+'</option>').join('');cs.innerHTML='<option value="">Cliente: todos</option>'+uq(recs.map(r=>r.cliente)).map(v=>'<option value="'+esc(v)+'">'+esc(v.length>35?v.slice(0,35)+'…':v)+'</option>').join('');bs.innerHTML='<option value="">Blindagem: todas</option>'+uq(recs.map(r=>r.blindagem)).map(v=>'<option value="'+esc(v)+'">'+esc(v)+'</option>').join('');vs.value=cv;cs.value=cc;bs.value=cb}
+function getFiltered(){let recs=visibleRecords();const q=tableState.search.toLowerCase().trim();if(q)recs=recs.filter(r=>Object.values(r).map(v=>String(v==null?'':v)).join(' ').toLowerCase().includes(q)||vendName(r.vendedor).includes(q));if(tableState.vend)recs=recs.filter(r=>r.vendedor===tableState.vend);if(tableState.cli)recs=recs.filter(r=>r.cliente===tableState.cli);if(tableState.blind)recs=recs.filter(r=>r.blindagem===tableState.blind);if(tableState.status)recs=recs.filter(r=>recStatus(r)===tableState.status);if(tableState.dateField||tableState.date||tableState.month||tableState.year||tableState.from||tableState.to){recs=recs.filter(r=>matchTemporal(getDbsDates(r,tableState.dateField),tableState))}const k=tableState.sortKey,d=tableState.sortDir==='asc'?1:-1;return[...recs].sort((a,b)=>{let va,vb;if(k==='dias'){va=Number(a[k])||0;vb=Number(b[k])||0;return(va-vb)*d}va=String(a[k]||'').toLowerCase();vb=String(b[k]||'').toLowerCase();return va<vb?-d:va>vb?d:0})}
+const COLS=[{key:'os',label:'OS'},{key:'cliente',label:'Cliente'},{key:'veiculo',label:'Veículo'},{key:'blindagem',label:'Blindagem'},{key:'vendedor',label:'Vendedor'},{key:'autorizacao',label:'Autorização'},{key:'emissaoTermo',label:'Emi. Termo'},{key:'engenhariaAss',label:'Eng. Ass.'},{key:'procAss',label:'Proc. Ass.'},{key:'diaAss',label:'Dia'},{key:'sicovabEnvio',label:'Sicovab'},{key:'prazoEmissaoDB',label:'Prazo D.B'},{key:'emissaoDB',label:'Emissão D.B'},{key:'dias',label:'Dias'},{key:'_status',label:'Status'}];
+function renderTable(){fillFilters();$('#theadRow').innerHTML=COLS.map(c=>{const arr=tableState.sortKey===c.key?(tableState.sortDir==='asc'?'▲':'▼'):'';return'<th data-k="'+c.key+'">'+c.label+' <span style="opacity:.5;font-size:8px">'+arr+'</span></th>'}).join('');$$('#theadRow th').forEach(th=>th.onclick=()=>{const k=th.dataset.k;if(tableState.sortKey===k)tableState.sortDir=tableState.sortDir==='asc'?'desc':'asc';else{tableState.sortKey=k;tableState.sortDir='asc'}tableState.page=1;renderTable()});const all=getFiltered();$('#recCount').textContent=all.length+' registro'+(all.length===1?'':'s')+(currentUser.role==='vendedor'?' (seus)':currentUser.role==='gerente'?' (sua equipe)':'');const pp=tableState.perPage,total=all.length,pages=Math.max(1,Math.ceil(total/pp));if(tableState.page>pages)tableState.page=pages;const start=(tableState.page-1)*pp,rows=all.slice(start,start+pp),tb=$('#tbodyRec');if(!rows.length){tb.innerHTML='<tr><td colspan="'+COLS.length+'" style="text-align:center;padding:40px;color:var(--muted)">Nenhum registro encontrado</td></tr>'}else{tb.innerHTML=rows.map(r=>{const st=recStatus(r);const lbl=st==='emitido'?'Emitida':st==='atrasado'?'Atrasada':'Pendente';return'<tr data-id="'+esc(r._id||r.os)+'"><td class="os">'+esc(r.os||'—')+'</td><td style="max-width:160px;overflow:hidden;text-overflow:ellipsis">'+esc(r.cliente||'—')+'</td><td>'+esc(r.veiculo||'—')+'</td><td style="max-width:140px;overflow:hidden;text-overflow:ellipsis">'+esc(r.blindagem||'—')+'</td><td><span class="vend-pill"><span class="vend-dot" style="background:'+vendColor(r.vendedor)+'">'+esc((vendName(r.vendedor)||'?')[0].toUpperCase())+'</span>'+esc(vendName(r.vendedor)||'—')+'</span></td><td class="mono" style="font-size:10px">'+fmtDate(r.autorizacao)+'</td><td class="mono" style="font-size:10px">'+fmtDate(r.emissaoTermo)+'</td><td class="mono" style="font-size:10px">'+fmtDate(r.engenhariaAss)+'</td><td class="mono" style="font-size:10px">'+fmtDate(r.procAss)+'</td><td style="font-size:9px">'+esc(r.diaAss||'—')+'</td><td class="mono" style="font-size:10px">'+fmtDate(r.sicovabEnvio)+'</td><td class="mono" style="font-size:10px">'+fmtDate(r.prazoEmissaoDB)+'</td><td class="mono" style="font-size:10px;font-weight:600">'+fmtDate(r.emissaoDB)+'</td><td class="mono" style="text-align:center">'+(r.dias!=null&&r.dias!==''?r.dias:'—')+'</td><td><span class="badge '+st+'"><span class="dot"></span>'+lbl+'</span></td></tr>'}).join('');tb.querySelectorAll('tr').forEach(tr=>{const rec=DB.declaracoes.find(r=>(r._id||r.os)===tr.dataset.id);if(rec)tr.onclick=()=>openDetail(rec)})}$('#pgInfo').innerHTML='<b>'+(total?start+1:0)+'–'+Math.min(start+pp,total)+'</b> de <b>'+total+'</b>';let btns='';const maxB=5;let s=Math.max(1,tableState.page-2),en=Math.min(pages,s+maxB-1);s=Math.max(1,en-maxB+1);for(let p=s;p<=en;p++)btns+='<button class="pg-btn '+(p===tableState.page?'active':'')+'" onclick="tableState.page='+p+';renderTable()">'+p+'</button>';$('#pgBtns').innerHTML=btns}
+
+const EXC_COLS=[{key:'os',label:'OS'},{key:'cliente',label:'Cliente'},{key:'vendedor',label:'Vendedor'},{key:'modelo',label:'Modelo'},{key:'exercito',label:'Status Exército'},{key:'envioSicovab',label:'Envio Sicovab'},{key:'prazoEmissao',label:'Prazo Emissão'},{key:'dataEmissao',label:'Data Emissão'},{key:'dias',label:'Dias'},{key:'observacao',label:'Observação'}];
+function renderExcTable(){populateYearSelects();const recs=visibleExc();const uq=a=>[...new Set(a.filter(Boolean))].sort();const vs=$('#fExcVend'),ss=$('#fExcStatus');const cv=excState.vend,cs=excState.status;vs.innerHTML='<option value="">Vendedor: todos</option>'+uq(recs.map(r=>r.vendedor)).map(v=>'<option value="'+esc(v)+'">'+esc(vendName(v))+'</option>').join('');ss.innerHTML='<option value="">Status Exército: todos</option>'+uq(recs.map(r=>r.exercito)).map(v=>'<option value="'+esc(v)+'">'+esc(v.length>40?v.slice(0,40)+'…':v)+'</option>').join('');vs.value=cv;ss.value=cs;$('#excHeadRow').innerHTML=EXC_COLS.map(c=>'<th>'+c.label+'</th>').join('');let filtered=recs;const q=excState.search.toLowerCase().trim();if(q)filtered=filtered.filter(r=>Object.values(r).map(v=>String(v==null?'':v)).join(' ').toLowerCase().includes(q));if(excState.vend)filtered=filtered.filter(r=>r.vendedor===excState.vend);if(excState.status)filtered=filtered.filter(r=>r.exercito===excState.status);if(excState.dates&&excState.dates.length>0){filtered=filtered.filter(r=>{const recDates=[r.envioSicovab,r.prazoEmissao,r.dataEmissao,r.dataColeta,r.prazo9dias,r.dtaPrev07,r.dtaPrev09].filter(Boolean);return recDates.some(d=>excState.dates.includes(d))})}if(excState.dateField||excState.date||excState.month||excState.year||excState.from||excState.to){filtered=filtered.filter(r=>matchTemporal(getExcDates(r,excState.dateField),excState))}$('#excCount').textContent=filtered.length+' processo'+(filtered.length===1?'':'s')+(currentUser.role==='vendedor'?' (seus)':currentUser.role==='gerente'?' (sua equipe)':'');const pp=excState.perPage,total=filtered.length,pages=Math.max(1,Math.ceil(total/pp));if(excState.page>pages)excState.page=pages;const start=(excState.page-1)*pp,rows=filtered.slice(start,start+pp),tb=$('#excBody');if(!rows.length){tb.innerHTML='<tr><td colspan="'+EXC_COLS.length+'" style="text-align:center;padding:40px;color:var(--muted)">Nenhum processo encontrado</td></tr>'}else{tb.innerHTML=rows.map(r=>'<tr data-id="'+esc(r._id||r.os)+'"><td class="os">'+esc(r.os||'—')+'</td><td style="max-width:180px;overflow:hidden;text-overflow:ellipsis">'+esc(r.cliente||'—')+'</td><td><span class="vend-pill"><span class="vend-dot" style="background:'+vendColor(r.vendedor)+'">'+esc((vendName(r.vendedor)||'?')[0].toUpperCase())+'</span>'+esc(vendName(r.vendedor)||'—')+'</span></td><td>'+esc(r.modelo||'—')+'</td><td style="max-width:220px;overflow:hidden;text-overflow:ellipsis;font-size:10px"><span class="badge autpendente"><span class="dot"></span>'+esc(r.exercito||'—')+'</span></td><td class="mono" style="font-size:10px">'+fmtDate(r.envioSicovab)+'</td><td class="mono" style="font-size:10px">'+fmtDate(r.prazoEmissao)+'</td><td class="mono" style="font-size:10px;font-weight:600">'+fmtDate(r.dataEmissao)+'</td><td class="mono" style="text-align:center">'+(r.dias!=null&&r.dias!==''?r.dias:'—')+'</td><td style="max-width:200px;overflow:hidden;text-overflow:ellipsis;font-size:10px">'+esc(r.observacao||'—')+'</td></tr>').join('');tb.querySelectorAll('tr').forEach(tr=>{const rec=(DB.autorizacoes||[]).find(r=>String(r._id||r.os)===String(tr.dataset.id));if(rec)tr.onclick=()=>openExcDetail(rec)})}$('#excPgInfo').innerHTML='<b>'+(total?start+1:0)+'–'+Math.min(start+pp,total)+'</b> de <b>'+total+'</b>';let btns='';const maxB=5;let s=Math.max(1,excState.page-2),en=Math.min(pages,s+maxB-1);s=Math.max(1,en-maxB+1);for(let p=s;p<=en;p++)btns+='<button class="pg-btn '+(p===excState.page?'active':'')+'" onclick="excState.page='+p+';renderExcTable()">'+p+'</button>';$('#excPgBtns').innerHTML=btns}
+
+function getUnifiedData(){const dbs=visibleRecords();const exc=visibleExc();const unified=new Map();dbs.forEach(r=>{unified.set(r.os,{os:r.os,cliente:r.cliente,vendedor:r.vendedor,veiculo:r.veiculo,blindagem:r.blindagem,dbs:r,aut:null})});exc.forEach(r=>{if(unified.has(r.os)){unified.get(r.os).aut=r}else{unified.set(r.os,{os:r.os,cliente:r.cliente,vendedor:r.vendedor,veiculo:r.modelo,blindagem:'',dbs:null,aut:r})}});return Array.from(unified.values())}
+function renderUnified(){populateYearSelects();const all=getUnifiedData();const uq=a=>[...new Set(a.filter(Boolean))].sort();const vs=$('#fUniVend');const cv=uniState.vend;vs.innerHTML='<option value="">Vendedor: todos</option>'+uq(all.map(r=>r.vendedor)).map(v=>'<option value="'+esc(v)+'">'+esc(vendName(v))+'</option>').join('');vs.value=cv;$('#uniHeadRow').innerHTML='<th>OS</th><th>Cliente</th><th>Vendedor</th><th>Veículo</th><th>D.B</th><th>Autorização</th><th>Emissão D.B</th><th>Aut. Exército</th><th>Timeline</th>';let filtered=all;const q=uniState.search.toLowerCase().trim();if(q)filtered=filtered.filter(r=>Object.values(r).map(v=>String(v==null?'':v)).join(' ').toLowerCase().includes(q));if(uniState.vend)filtered=filtered.filter(r=>r.vendedor===uniState.vend);if(uniState.status==='completo')filtered=filtered.filter(r=>r.dbs&&r.aut);if(uniState.status==='so-dbs')filtered=filtered.filter(r=>r.dbs&&!r.aut);if(uniState.status==='so-aut')filtered=filtered.filter(r=>!r.dbs&&r.aut);if(uniState.dateField||uniState.date||uniState.month||uniState.year||uniState.from||uniState.to){filtered=filtered.filter(r=>matchTemporal(getUniDates(r,uniState.dateField),uniState))}$('#uniCount').textContent=filtered.length+' processo'+(filtered.length===1?'':'s');const pp=uniState.perPage,total=filtered.length,pages=Math.max(1,Math.ceil(total/pp));if(uniState.page>pages)uniState.page=pages;const start=(uniState.page-1)*pp,rows=filtered.slice(start,start+pp),tb=$('#uniBody');if(!rows.length){tb.innerHTML='<tr><td colspan="9" style="text-align:center;padding:40px;color:var(--muted)">Nenhum registro encontrado</td></tr>'}else{tb.innerHTML=rows.map(r=>{const dbsStatus=r.dbs?recStatus(r.dbs):null;const dbsLabel=dbsStatus==='emitido'?'Emitida':dbsStatus==='atrasado'?'Atrasada':dbsStatus==='pendente'?'Pendente':'—';const autLabel=r.aut?'Pendente':'—';const timeline=[];if(r.dbs&&r.dbs.autorizacao)timeline.push({date:r.dbs.autorizacao,event:'Autorização',source:'dbs'});if(r.dbs&&r.dbs.emissaoTermo)timeline.push({date:r.dbs.emissaoTermo,event:'Emissão Termo',source:'dbs'});if(r.dbs&&r.dbs.emissaoDB)timeline.push({date:r.dbs.emissaoDB,event:'Emissão D.B',source:'dbs'});if(r.aut&&r.aut.envioSicovab)timeline.push({date:r.aut.envioSicovab,event:'Envio Sicovab',source:'aut'});if(r.aut&&r.aut.dataEmissao)timeline.push({date:r.aut.dataEmissao,event:'Aut. Exército',source:'aut'});timeline.sort((a,b)=>a.date.localeCompare(b.date));const timelineHtml=timeline.slice(-3).map(t=>'<div class="timeline-item"><span class="timeline-date">'+fmtDate(t.date)+'</span><span class="timeline-event">'+t.event+'</span><span class="timeline-source '+t.source+'">'+(t.source==='dbs'?'D.B':'Aut.')+'</span></div>').join('');return'<tr data-os="'+esc(r.os)+'"><td class="os">'+esc(r.os||'—')+'</td><td style="max-width:160px;overflow:hidden;text-overflow:ellipsis">'+esc(r.cliente||'—')+'</td><td><span class="vend-pill"><span class="vend-dot" style="background:'+vendColor(r.vendedor)+'">'+esc((vendName(r.vendedor)||'?')[0].toUpperCase())+'</span>'+esc(vendName(r.vendedor)||'—')+'</span></td><td>'+esc(r.veiculo||'—')+'</td><td>'+(dbsStatus?'<span class="badge '+dbsStatus+'"><span class="dot"></span>'+dbsLabel+'</span>':'—')+'</td><td>'+(r.aut?'<span class="badge autpendente"><span class="dot"></span>'+autLabel+'</span>':'—')+'</td><td class="mono" style="font-size:10px">'+(r.dbs?fmtDate(r.dbs.emissaoDB):'—')+'</td><td class="mono" style="font-size:10px">'+(r.aut?fmtDate(r.aut.dataEmissao):'—')+'</td><td><div class="unified-timeline">'+(timelineHtml||'<span style="color:var(--muted);font-size:10px">Sem eventos</span>')+'</div></td></tr>'}).join('');tb.querySelectorAll('tr').forEach(tr=>{tr.onclick=()=>{const os=tr.dataset.os;const rec=getUnifiedData().find(r=>r.os===os);if(rec)openUnifiedDetail(rec)}})}$('#uniPgInfo').innerHTML='<b>'+(total?start+1:0)+'–'+Math.min(start+pp,total)+'</b> de <b>'+total+'</b>';let btns='';const maxB=5;let s=Math.max(1,uniState.page-2),en=Math.min(pages,s+maxB-1);s=Math.max(1,en-maxB+1);for(let p=s;p<=en;p++)btns+='<button class="pg-btn '+(p===uniState.page?'active':'')+'" onclick="uniState.page='+p+';renderUnified()">'+p+'</button>';$('#uniPgBtns').innerHTML=btns}
+
+function enterApp(){
+  const fresh=DB.usuarios.find(u=>u.email.toLowerCase()===currentUser.email.toLowerCase());
+  if(fresh){
+    if(currentUser.email.toLowerCase()==='admin@conceptbesafe.com.br')fresh.role='admin';
+    currentUser=fresh;
+  }
+  $('#loginView').classList.add('hidden');
+  $('#appView').classList.remove('hidden');
+  $('#userName').textContent=currentUser.name||vendName(currentUser.email);
+  $('#userRole').textContent=currentUser.role==='admin'?'Gerencial':currentUser.role==='gerente'?'Gerente':'Vendedor';
+  $('#userAvatar').textContent=(currentUser.name||currentUser.email)[0].toUpperCase();
+  $$('.admin-only').forEach(el=>el.style.display=currentUser.role==='admin'?'':'none');
+  populateYearSelects();
+  navigate('dashboard');
+  updateBarRender();
+}
+function applyTheme(){const t=DB.config.theme||'light';document.documentElement.setAttribute('data-theme',t);$('#themeLabel').textContent=t==='dark'?'Modo claro':'Modo escuro';if(currentUser)renderDashboard()}
+
+function updateBarRender(){
+  const dbsCount=currentUser?visibleRecords().length:DB.declaracoes.length;
+  const autCount=currentUser?visibleExc().length:DB.autorizacoes.length;
+  $('#updDbs').textContent=fmtDateTime(DB.lastUpdate.dbs)+' ('+dbsCount+')';
+  $('#updAut').textContent=fmtDateTime(DB.lastUpdate.aut)+' ('+autCount+')';
+  const sDbs=$('#savedInfoDbs');
+  if(sDbs)sDbs.innerHTML=DB.declaracoes.length?`Última atualização: <b>${fmtDateTime(DB.lastUpdate.dbs)}</b> • Total: <b>${DB.declaracoes.length} D.Bs</b>`:'Nenhuma planilha salva ainda.';
+  const sAut=$('#savedInfoAut');
+  if(sAut)sAut.innerHTML=DB.autorizacoes.length?`Última atualização: <b>${fmtDateTime(DB.lastUpdate.aut)}</b> • Total: <b>${DB.autorizacoes.length} processos</b>`:'Nenhuma planilha salva ainda.';
+  const badge=$('#storageBadge');
+  if(badge){
+    const base=getCloudBaseUrl();
+    if(!base){
+      badge.style.color='var(--amber)';
+      badge.textContent='🟡 Nuvem NÃO configurada NESTE aparelho';
+    }else if(!window.__lastPullOK){
+      badge.style.color='var(--red)';
+      badge.textContent='🔴 Falha ao conectar no Firebase (Verifique Regras)';
+    }else{
+      const lastP=new Date(window.__lastPullOK).toLocaleTimeString('pt-BR');
+      const lastU=window.__lastPushOK?new Date(window.__lastPushOK).toLocaleTimeString('pt-BR'):'—';
+      badge.style.color='var(--green)';
+      badge.textContent=`🟢 Nuvem ativa • pull ${lastP} • push ${lastU}`;
+    }
+  }
+}
+
+const VIEW_META={dashboard:{t:'Dashboard',c:'Visão geral'},unified:{t:'Visão Unificada',c:'Dados cruzados por OS'},records:{t:'Declarações D.Bs',c:'Pesquise e filtre D.Bs'},exercicio:{t:'Autorização Pendente',c:'Processos de autorização no Exército'},import:{t:'Importar planilhas',c:'Atualize a base'},users:{t:'Usuários & Equipes',c:'Controle de acesso'}};
+function navigate(v){
+  if((v==='import'||v==='users')&&currentUser.role!=='admin'){toast('Apenas perfil gerencial.','err');return}
+  toggleMobileSidebar(false);
+  $$('.nav-item[data-view]').forEach(b=>b.classList.toggle('active',b.dataset.view===v));
+  $$('.mob-nav-btn[data-view]').forEach(b=>b.classList.toggle('active',b.dataset.view===v));
+  ['dashboard','unified','records','exercicio','import','users'].forEach(x=>$('#view-'+x).classList.toggle('hidden',x!==v));
+  $('#viewTitle').textContent=VIEW_META[v].t;
+  $('#viewCrumb').textContent=VIEW_META[v].c;
+  if(v==='dashboard')renderDashboard();
+  if(v==='records')renderTable();
+  if(v==='exercicio')renderExcTable();
+  if(v==='unified')renderUnified();
+  if(v==='import')updateBarRender();
+  if(v==='users')renderUsers();
+}
+
+function renderDashboard(){
+  if(!currentUser)return;
+  populateYearSelects();
+  const baseRecs=visibleRecords();
+  const baseExc=visibleExc();
+
+  const uqVends=[...new Set(baseRecs.map(r=>r.vendedor).filter(Boolean))].sort();
+  const dashVendSel=$('#fDashVend');
+  if(dashVendSel){
+    const curV=dashState.vend;
+    dashVendSel.innerHTML='<option value="">Vendedor: todos</option>'+uqVends.map(v=>'<option value="'+esc(v)+'">'+esc(vendName(v))+'</option>').join('');
+    dashVendSel.value=uqVends.includes(curV)?curV:'';
+    if(!uqVends.includes(curV))dashState.vend='';
+  }
+
+  const hasDashFilter=Boolean(dashState.date||dashState.month||dashState.year||dashState.from||dashState.to);
+  let recs=baseRecs.filter(r=>matchTemporal(getDbsDates(r,dashState.dateField),dashState));
+  if(dashState.vend)recs=recs.filter(r=>r.vendedor===dashState.vend);
+  if(dashState.status)recs=recs.filter(r=>recStatus(r)===dashState.status);
+
+  let excRecs=baseExc.filter(r=>matchTemporal(getExcDates(r,dashState.dateField==='sicovabEnvio'?'envioSicovab':dashState.dateField==='prazoEmissaoDB'?'prazoEmissao':dashState.dateField==='emissaoDB'?'dataEmissao':''),dashState));
+  if(dashState.vend)excRecs=excRecs.filter(r=>vendMatchExc(r,dashState.vend));
+
+  const hoje=todayISO();
+  const limite7d=addDaysISO(hoje,7);
+  const em=recs.filter(r=>recStatus(r)==='emitido');
+  const pendAll=recs.filter(r=>recStatus(r)!=='emitido');
+  const atrasadas=recs.filter(r=>recStatus(r)==='atrasado');
+  const pendNoPrazo=recs.filter(r=>recStatus(r)==='pendente');
+  const vencendo7=pendAll.filter(r=>r.prazoEmissaoDB&&r.prazoEmissaoDB>=hoje&&r.prazoEmissaoDB<=limite7d);
+  const semSicovab=pendAll.filter(r=>!r.sicovabEnvio||r.sicovabEnvio==='');
+
+  const mesAtual=hoje.slice(0,7);
+  const emRef=hasDashFilter?em:em.filter(r=>(r.emissaoDB||'').substring(0,7)===mesAtual);
+  const diasMes=emRef.map(r=>Number(r.dias)).filter(n=>!isNaN(n)&&n>0);
+  const mediaMes=diasMes.length?Math.round(diasMes.reduce((a,b)=>a+b,0)/diasMes.length*10)/10:0;
+
+  const diasGeral=em.map(r=>Number(r.dias)).filter(n=>!isNaN(n)&&n>0);
+  const mediaGeral=diasGeral.length?Math.round(diasGeral.reduce((a,b)=>a+b,0)/diasGeral.length*10)/10:0;
+  const minDias=diasGeral.length?Math.min(...diasGeral):0;
+  const maxDias=diasGeral.length?Math.max(...diasGeral):0;
+
+  const taxaConcl=recs.length?Math.round((em.length/recs.length)*100):0;
+  const emComPrazo=em.filter(r=>r.prazoEmissaoDB&&r.emissaoDB);
+  const emNoPrazo=emComPrazo.filter(r=>r.emissaoDB<=r.prazoEmissaoDB);
+  const slaPct=emComPrazo.length?Math.round((emNoPrazo.length/emComPrazo.length)*100):100;
+  const excComSicovab=excRecs.filter(r=>r.envioSicovab).length;
+
+  $('#kTotal').textContent=recs.length;
+  $('#kTotalHint').textContent=new Set(recs.map(r=>r.cliente).filter(Boolean)).size+' clientes';
+  $('#kEmitidas').textContent=em.length;
+  $('#kEmitHint').textContent=hasDashFilter?(em.length+' no filtro'):(emRef.length+' neste mês');
+  $('#kPend').textContent=pendAll.length;
+  $('#kPendHint').textContent=pendNoPrazo.length+' no prazo • '+atrasadas.length+' atrasadas';
+  $('#kAtrasadas').textContent=atrasadas.length;
+  $('#kVencendo').textContent=vencendo7.length;
+  $('#kTaxa').textContent=taxaConcl+'%';
+  $('#kTaxaHint').textContent='SLA no prazo: '+slaPct+'%';
+  $('#kTempo').textContent=mediaMes+' d';
+  $('#kTempoGeral').textContent=mediaGeral+' d';
+  $('#kTempoGeralHint').textContent=diasGeral.length?`mín: ${minDias}d / máx: ${maxDias}d`:'—';
+  $('#kSemSicovab').textContent=semSicovab.length;
+  $('#kExcPend').textContent=excRecs.length;
+  $('#kExcHint').textContent=excComSicovab+' enviados ao Sicovab';
+
+  const totalPipe=recs.length||1;
+  const steps=[
+    {name:'1. Autorização',count:recs.filter(r=>r.autorizacao).length,color:'#3b82f6',sub:'Aut. registrada'},
+    {name:'2. Termo Emitido',count:recs.filter(r=>r.emissaoTermo).length,color:'#6366f1',sub:'Termo gerado'},
+    {name:'3. Ass. Engenharia',count:recs.filter(r=>r.engenhariaAss).length,color:'#8b5cf6',sub:'Assinado Eng.'},
+    {name:'4. Ass. Procuração',count:recs.filter(r=>r.procAss).length,color:'#ec4899',sub:'Assinado Proc.'},
+    {name:'5. Envio Sicovab',count:recs.filter(r=>r.sicovabEnvio).length,color:'#f59e0b',sub:'Protocolado'},
+    {name:'6. D.B Emitida',count:recs.filter(r=>r.emissaoDB).length,color:'#10b981',sub:'Concluído'}
+  ];
+  const pipeEl=$('#dashPipeline');
+  if(pipeEl){
+    pipeEl.innerHTML=steps.map(s=>{
+      const pct=recs.length?Math.round((s.count/totalPipe)*100):0;
+      return`<div class="pipe-step"><div class="pipe-top"><span class="st-name">${s.name}</span><span class="st-pct">${pct}%</span></div><div class="pipe-val">${s.count}</div><div class="pipe-bar"><div class="pipe-fill" style="width:${pct}%;background:${s.color}"></div></div><div class="pipe-sub">${s.sub} • faltam: <b>${Math.max(0,recs.length-s.count)}</b></div></div>`;
+    }).join('');
+  }
+
+  renderCharts(recs,excRecs);
+  renderDashTables(recs,excRecs);
+  updateBarRender();
+}
+
+function renderDashTables(recs,excRecs){
+  const vMap={};
+  recs.forEach(r=>{
+    const v=r.vendedor||'Sem vendedor';
+    if(!vMap[v])vMap[v]={vendedor:v,total:0,emitidas:0,pendentes:0,atrasadas:0,diasSum:0,diasCount:0,autCount:0};
+    vMap[v].total++;
+    const st=recStatus(r);
+    if(st==='emitido')vMap[v].emitidas++;
+    else if(st==='atrasado')vMap[v].atrasadas++;
+    else vMap[v].pendentes++;
+    const d=Number(r.dias);
+    if(!isNaN(d)&&d>0){vMap[v].diasSum+=d;vMap[v].diasCount++}
+  });
+  excRecs.forEach(r=>{
+    const matchKey=Object.keys(vMap).find(k=>vendMatchExc(r,k))||(r.vendedor||'Sem vendedor');
+    if(!vMap[matchKey])vMap[matchKey]={vendedor:matchKey,total:0,emitidas:0,pendentes:0,atrasadas:0,diasSum:0,diasCount:0,autCount:0};
+    vMap[matchKey].autCount++;
+  });
+  const vendRows=Object.values(vMap).sort((a,b)=>b.total-a.total);
+  const vBody=$('#dashVendBody');
+  if(vBody){
+    vBody.innerHTML=vendRows.length?vendRows.map(x=>{
+      const pct=x.total?Math.round((x.emitidas/x.total)*100):0;
+      const sla=x.diasCount?Math.round((x.diasSum/x.diasCount)*10)/10:'—';
+      return`<tr><td><span class="vend-pill"><span class="vend-dot" style="background:${vendColor(x.vendedor)}">${esc((vendName(x.vendedor)||'?')[0].toUpperCase())}</span>${esc(vendName(x.vendedor))}</span></td><td class="mono" style="text-align:center;font-weight:700">${x.total}</td><td class="mono" style="text-align:center;color:var(--green);font-weight:700">${x.emitidas}</td><td class="mono" style="text-align:center;color:var(--amber)">${x.pendentes}</td><td class="mono" style="text-align:center;color:${x.atrasadas?'var(--red)':'var(--muted)'}">${x.atrasadas}</td><td><div class="pbar-inline"><div class="pbar-track"><div class="pbar-fill" style="width:${pct}%"></div></div><span class="mono" style="font-size:10px;font-weight:700">${pct}%</span></div></td><td class="mono" style="text-align:center">${sla!=='—'?sla+'d':'—'}</td><td class="mono" style="text-align:center">${x.autCount}</td></tr>`;
+    }).join(''):'<tr><td colspan="8" style="text-align:center;padding:24px;color:var(--muted)">Sem dados</td></tr>';
+  }
+  const hoje=todayISO();
+  const criticas=recs.filter(r=>recStatus(r)!=='emitido'&&r.prazoEmissaoDB).sort((a,b)=>String(a.prazoEmissaoDB).localeCompare(String(b.prazoEmissaoDB))).slice(0,15);
+  const aBody=$('#dashAlertBody');
+  if(aBody){
+    aBody.innerHTML=criticas.length?criticas.map(r=>{
+      const st=recStatus(r);
+      const diffDays=Math.round((new Date(r.prazoEmissaoDB+'T12:00:00')-new Date(hoje+'T12:00:00'))/86400000);
+      const sitLbl=diffDays<0?`${Math.abs(diffDays)}d atraso`:diffDays===0?'Vence hoje':`Em ${diffDays}d`;
+      return`<tr data-os="${esc(r.os)}"><td class="os">${esc(r.os||'—')}</td><td style="max-width:130px;overflow:hidden;text-overflow:ellipsis">${esc(r.cliente||'—')}</td><td style="max-width:110px;overflow:hidden;text-overflow:ellipsis">${esc(r.veiculo||'—')}</td><td>${esc(vendName(r.vendedor)||'—')}</td><td class="mono" style="font-size:10px">${fmtDate(r.prazoEmissaoDB)}</td><td><span class="badge ${st}"><span class="dot"></span>${sitLbl}</span></td></tr>`;
+    }).join(''):'<tr><td colspan="6" style="text-align:center;padding:24px;color:var(--muted)">Sem prazos críticos</td></tr>';
+    aBody.querySelectorAll('tr[data-os]').forEach(tr=>{tr.onclick=()=>{const rec=DB.declaracoes.find(x=>String(x.os)===String(tr.dataset.os));if(rec)openDetail(rec)}});
+  }
+}
+
+function renderCharts(recs,excRecs=[]){
+  try{
+    if(typeof Chart==='undefined')return;
+    const dk=DB.config.theme==='dark';
+    Chart.defaults.color=dk?'#aab8d2':'#64748b';
+    Object.values(charts).forEach(c=>{try{c&&c.destroy()}catch(e){}});
+    charts={};
+    const PAL=['#3b82f6','#10b981','#f59e0b','#ef4444','#8b5cf6','#ec4899','#14b8a6','#f97316','#6366f1','#84cc16','#06b6d4','#e11d48'];
+    const isMob=window.innerWidth<640;
+
+    const byV={};
+    recs.forEach(r=>{const k=vendName(r.vendedor)||'—';if(!byV[k])byV[k]={em:0,pe:0,at:0,tot:0};const st=recStatus(r);if(st==='emitido')byV[k].em++;else if(st==='atrasado')byV[k].at++;else byV[k].pe++;byV[k].tot++});
+    const vA=Object.entries(byV).sort((a,b)=>b[1].tot-a[1].tot).slice(0,9);
+    if($('#chVend'))charts.v=new Chart($('#chVend'),{type:'bar',data:{labels:vA.map(x=>x[0]),datasets:[{label:'Emitidas',data:vA.map(x=>x[1].em),backgroundColor:'#10b981',borderRadius:4},{label:'Pendentes',data:vA.map(x=>x[1].pe),backgroundColor:'#f59e0b',borderRadius:4},{label:'Atrasadas',data:vA.map(x=>x[1].at),backgroundColor:'#ef4444',borderRadius:4}]},options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'bottom',labels:{boxWidth:10,font:{size:10}}}},scales:{x:{stacked:true,beginAtZero:true},y:{stacked:true}}}});
+
+    const stCounts={emitido:0,pendente:0,atrasado:0};
+    recs.forEach(r=>{stCounts[recStatus(r)]++});
+    if($('#chStatus'))charts.st=new Chart($('#chStatus'),{type:'doughnut',data:{labels:['Emitidas','No Prazo','Atrasadas'],datasets:[{data:[stCounts.emitido,stCounts.pendente,stCounts.atrasado],backgroundColor:['#10b981','#f59e0b','#ef4444']}]},options:{responsive:true,maintainAspectRatio:false,cutout:'58%',plugins:{legend:{position:isMob?'bottom':'right',labels:{boxWidth:10,font:{size:10}}}}}});
+
+    const byM={},bySic={};
+    recs.forEach(r=>{if(r.emissaoDB&&r.emissaoDB.length===10){const mk=r.emissaoDB.substring(0,7);byM[mk]=(byM[mk]||0)+1}if(r.sicovabEnvio&&r.sicovabEnvio.length===10){const mk=r.sicovabEnvio.substring(0,7);bySic[mk]=(bySic[mk]||0)+1}});
+    const mK=[...new Set([...Object.keys(byM),...Object.keys(bySic)])].sort();
+    if($('#chMes'))charts.m=new Chart($('#chMes'),{type:'line',data:{labels:mK.map(k=>{const[y,m]=k.split('-');return MONTH_PT[+m-1]+'/'+y.slice(2)}),datasets:[{label:'Emitidas',data:mK.map(k=>byM[k]||0),borderColor:'#10b981',backgroundColor:'rgba(16,185,129,.12)',fill:true,tension:.35},{label:'Sicovab',data:mK.map(k=>bySic[k]||0),borderColor:'#3b82f6',borderDash:[4,4],tension:.35}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'bottom',labels:{boxWidth:10,font:{size:10}}}},scales:{y:{beginAtZero:true}}}});
+
+    const buckets={'Até 5d':0,'6-10d':0,'11-15d':0,'16-20d':0,'+20d':0};
+    recs.forEach(r=>{const d=Number(r.dias);if(isNaN(d)||d<=0)return;if(d<=5)buckets['Até 5d']++;else if(d<=10)buckets['6-10d']++;else if(d<=15)buckets['11-15d']++;else if(d<=20)buckets['16-20d']++;else buckets['+20d']++});
+    if($('#chLeadTime'))charts.lt=new Chart($('#chLeadTime'),{type:'bar',data:{labels:Object.keys(buckets),datasets:[{data:Object.values(buckets),backgroundColor:['#10b981','#3b82f6','#6366f1','#f59e0b','#ef4444'],borderRadius:5}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{y:{beginAtZero:true}}}});
+
+    const byB={};recs.forEach(r=>{const k=r.blindagem||'—';byB[k]=(byB[k]||0)+1});
+    const bA=Object.entries(byB).sort((a,b)=>b[1]-a[1]).slice(0,7);
+    if($('#chBlind'))charts.b=new Chart($('#chBlind'),{type:'doughnut',data:{labels:bA.map(x=>x[0].length>26?x[0].slice(0,26)+'…':x[0]),datasets:[{data:bA.map(x=>x[1]),backgroundColor:PAL}]},options:{responsive:true,maintainAspectRatio:false,cutout:'55%',plugins:{legend:{position:isMob?'bottom':'right',labels:{boxWidth:10,font:{size:9}}}}}});
+
+    const byMod={};recs.forEach(r=>{const k=(r.veiculo||'—').trim();byMod[k]=(byMod[k]||0)+1});
+    const modA=Object.entries(byMod).sort((a,b)=>b[1]-a[1]).slice(0,8);
+    if($('#chModelos'))charts.mod=new Chart($('#chModelos'),{type:'bar',data:{labels:modA.map(x=>x[0].length>22?x[0].slice(0,22)+'…':x[0]),datasets:[{data:modA.map(x=>x[1]),backgroundColor:'#0d9488',borderRadius:5}]},options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}}}});
+
+    const byC={};recs.forEach(r=>{const k=r.cliente||'—';byC[k]=(byC[k]||0)+1});
+    const cA=Object.entries(byC).sort((a,b)=>b[1]-a[1]).slice(0,7);
+    if($('#chCli'))charts.c=new Chart($('#chCli'),{type:'bar',data:{labels:cA.map(x=>x[0].length>22?x[0].slice(0,22)+'…':x[0]),datasets:[{data:cA.map(x=>x[1]),backgroundColor:'#8b5cf6',borderRadius:5}]},options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}}}});
+
+    const byExc={};excRecs.forEach(r=>{const k=(r.exercito||'Não informado').trim();byExc[k]=(byExc[k]||0)+1});
+    const excA=Object.entries(byExc).sort((a,b)=>b[1]-a[1]).slice(0,7);
+    if($('#chExcStatus'))charts.exc=new Chart($('#chExcStatus'),{type:'bar',data:{labels:excA.map(x=>x[0].length>24?x[0].slice(0,24)+'…':x[0]),datasets:[{data:excA.map(x=>x[1]),backgroundColor:'#f59e0b',borderRadius:5}]},options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}}}});
+  }catch(e){}
+}
+
+function bindTemporalInputs(prefix,stateObj,renderFn){
+  ['DateField','Date','Month','Year','From','To'].forEach(k=>{
+    const el=$('#f'+prefix+k);
+    const prop=k.charAt(0).toLowerCase()+k.slice(1);
+    if(el)el.onchange=e=>{stateObj[prop]=e.target.value;if(stateObj.page)stateObj.page=1;renderFn()};
+  });
+}
+function resetTemporalInputs(prefix,stateObj){
+  ['DateField','Date','Month','Year','From','To'].forEach(k=>{
+    const prop=k.charAt(0).toLowerCase()+k.slice(1);
+    stateObj[prop]='';
+    const el=$('#f'+prefix+k);if(el)el.value='';
+  });
+}
+
+async function init(){
+  $('#btnLogin').addEventListener('click',async function(){
+    const btn=$('#btnLogin');
+    try{
+      const emailVal=$('#loginEmail').value;
+      const passVal=$('#loginPass').value;
+
+      let res=tryLogin(emailVal,passVal);
+
+      if(!res.ok&&!window.__dbReady){
+        btn.disabled=true;
+        btn.textContent='Carregando...';
+        try{await loadAllDatabases();ensureAdmin()}catch(e){}
+        window.__dbReady=true;
+        btn.disabled=false;
+        btn.textContent='Entrar com Segurança';
+        res=tryLogin(emailVal,passVal);
+      }
+
+      if(!res.ok&&getCloudBaseUrl()){
+        btn.disabled=true;
+        btn.textContent='Sincronizando...';
+        try{await pullFromCloud(true)}catch(e){}
+        res=tryLogin(emailVal,passVal);
+        if(!res.ok){
+          const remoteUser=await tryCloudLogin(emailVal,passVal);
+          if(remoteUser){
+            const key=remoteUser.email.trim().toLowerCase();
+            const fresh={...remoteUser,email:key,updatedAt:new Date().toISOString()};
+            const idx=DB.usuarios.findIndex(x=>x.email.toLowerCase()===key);
+            if(idx>=0)DB.usuarios[idx]=fresh;else DB.usuarios.push(fresh);
+            DB.deletedUsers=(DB.deletedUsers||[]).filter(d=>d!==key);
+            try{await saveUsersVault()}catch(e){}
+            res=tryLogin(emailVal,passVal);
+          }
+        }
+        btn.disabled=false;
+        btn.textContent='Entrar com Segurança';
+      }
+      if(res.ok){
+        $('#loginError').style.display='none';
+        enterApp();
+        if(res.mustChange)setTimeout(()=>openChangePassword(true),300);
+        if(getCloudBaseUrl())pullFromCloud(true);
+      }else{
+        $('#loginError').textContent=res.msg;
+        $('#loginError').style.display='block';
+      }
+    }catch(err){
+      btn.disabled=false;
+      btn.textContent='Entrar com Segurança';
+      const le=$('#loginError');
+      if(le){le.textContent='Não foi possível concluir o login neste dispositivo. Verifique sua conexão e tente novamente.';le.style.display='block'}
+    }
+  });
+  $('#loginForm').addEventListener('keydown',function(e){if(e.key==='Enter'){e.preventDefault();$('#btnLogin').click()}});
+  $('#loginForm').addEventListener('submit',function(e){e.preventDefault();$('#btnLogin').click()});
+
+  $$('.nav-item[data-view]').forEach(b=>b.onclick=()=>navigate(b.dataset.view));
+  $$('.mob-nav-btn[data-view]').forEach(b=>b.onclick=()=>navigate(b.dataset.view));
+  $('#btnMobMoreMenu').onclick=()=>toggleMobileSidebar(true);
+  $('#btnOpenSidebar').onclick=()=>toggleMobileSidebar(true);
+  $('#btnCloseSidebar').onclick=()=>toggleMobileSidebar(false);
+  $('#sidebarBackdrop').onclick=()=>toggleMobileSidebar(false);
+  $('#logoutBtn').onclick=logout;
+  $('#changePassBtn').onclick=()=>openChangePassword(false);
+  $('#themeBtn').onclick=async()=>{DB.config.theme=DB.config.theme==='dark'?'light':'dark';await saveLocalOnly();applyTheme()};
+  $('#btnForceSync').onclick=async()=>{
+    if(!getCloudBaseUrl()){
+      if(currentUser&&currentUser.role==='admin')openCloudConfigModal();
+      else toast('Cofre em nuvem ainda não configurado pelo Admin.','err');
+      return;
+    }
+    await pullFromCloud(false);
+  };
+  $('#btnTestCloud').onclick=()=>window.testCloudConnection();
+
+  bindTemporalInputs('Dash',dashState,renderDashboard);
+  $('#fDashVend').onchange=e=>{dashState.vend=e.target.value;renderDashboard()};
+  $('#fDashStatus').onchange=e=>{dashState.status=e.target.value;renderDashboard()};
+  $('#btnDashClear').onclick=()=>{dashState.vend='';dashState.status='';$('#fDashVend').value='';$('#fDashStatus').value='';resetTemporalInputs('Dash',dashState);renderDashboard()};
+
+  let deb;
+  $('#fSearch').addEventListener('input',e=>{clearTimeout(deb);deb=setTimeout(()=>{tableState.search=e.target.value;tableState.page=1;renderTable()},180)});
+  $('#fVend').onchange=e=>{tableState.vend=e.target.value;tableState.page=1;renderTable()};
+  $('#fCliente').onchange=e=>{tableState.cli=e.target.value;tableState.page=1;renderTable()};
+  $('#fBlind').onchange=e=>{tableState.blind=e.target.value;tableState.page=1;renderTable()};
+  $('#fStatus').onchange=e=>{tableState.status=e.target.value;tableState.page=1;renderTable()};
+  bindTemporalInputs('Rec',tableState,renderTable);
+  $('#btnClear').onclick=()=>{tableState={...tableState,search:'',vend:'',cli:'',blind:'',status:'',page:1};resetTemporalInputs('Rec',tableState);$('#fSearch').value='';$('#fStatus').value='';renderTable()};
+  $('#btnExport').onclick=exportExcel;
+
+  $('#fExcSearch').addEventListener('input',e=>{clearTimeout(deb);deb=setTimeout(()=>{excState.search=e.target.value;excState.page=1;renderExcTable()},180)});
+  $('#fExcVend').onchange=e=>{excState.vend=e.target.value;excState.page=1;renderExcTable()};
+  $('#fExcStatus').onchange=e=>{excState.status=e.target.value;excState.page=1;renderExcTable()};
+  bindTemporalInputs('Exc',excState,renderExcTable);
+  $('#btnExcClear').onclick=()=>{excState={...excState,search:'',vend:'',status:'',dates:[],page:1};resetTemporalInputs('Exc',excState);$('#fExcSearch').value='';renderExcDateTags();renderExcTable()};
+  $('#btnExcAddDate').onclick=addExcDate;
+  $('#fExcDateInput').addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();addExcDate()}});
+  renderExcDateTags();
+  $('#btnExportExc').onclick=exportExc;
+
+  $('#fUniSearch').addEventListener('input',e=>{clearTimeout(deb);deb=setTimeout(()=>{uniState.search=e.target.value;uniState.page=1;renderUnified()},180)});
+  $('#fUniVend').onchange=e=>{uniState.vend=e.target.value;uniState.page=1;renderUnified()};
+  $('#fUniStatus').onchange=e=>{uniState.status=e.target.value;uniState.page=1;renderUnified()};
+  bindTemporalInputs('Uni',uniState,renderUnified);
+  $('#btnUniClear').onclick=()=>{uniState={...uniState,search:'',vend:'',status:'',page:1};resetTemporalInputs('Uni',uniState);$('#fUniSearch').value='';$('#fUniStatus').value='';renderUnified()};
+  $('#btnExportUni').onclick=exportUnified;
+
+  $$('.import-tab').forEach(t=>t.onclick=()=>{$$('.import-tab').forEach(x=>x.classList.remove('active'));t.classList.add('active');const tab=t.dataset.tab;$('#impTabDbs').classList.toggle('hidden',tab!=='dbs');$('#impTabAut').classList.toggle('hidden',tab!=='aut')});
+  $('#fileInputDbs').onchange=e=>handleFileDbs(e.target.files[0]);
+  const dzDbs=$('#dropZoneDbs');['dragover','dragenter'].forEach(ev=>dzDbs.addEventListener(ev,e=>{e.preventDefault();dzDbs.classList.add('drag')}));['dragleave','drop'].forEach(ev=>dzDbs.addEventListener(ev,e=>{e.preventDefault();dzDbs.classList.remove('drag')}));dzDbs.addEventListener('drop',e=>handleFileDbs(e.dataTransfer.files[0]));
+  $$('#importPanelDbs .mode-card').forEach(mc=>mc.onclick=()=>{$$('#importPanelDbs .mode-card').forEach(x=>x.classList.remove('sel'));mc.classList.add('sel');importModeDbs=mc.dataset.mode});
+  $('#pvCancelDbs').onclick=()=>{pendingDbs=null;$('#importPanelDbs').classList.add('hidden');$('#dropZoneDbs').classList.remove('hidden');$('#fileInputDbs').value=''};
+  $('#btnConfirmDbs').onclick=doImportDbs;
+  $('#btnDownloadSavedDbs').onclick=()=>downloadSavedSheet('dbs');
+
+  $('#fileInputAut').onchange=e=>handleFileAut(e.target.files[0]);
+  const dzAut=$('#dropZoneAut');['dragover','dragenter'].forEach(ev=>dzAut.addEventListener(ev,e=>{e.preventDefault();dzAut.classList.add('drag')}));['dragleave','drop'].forEach(ev=>dzAut.addEventListener(ev,e=>{e.preventDefault();dzAut.classList.remove('drag')}));dzAut.addEventListener('drop',e=>handleFileAut(e.dataTransfer.files[0]));
+  $$('#importPanelAut .mode-card').forEach(mc=>mc.onclick=()=>{$$('#importPanelAut .mode-card').forEach(x=>x.classList.remove('sel'));mc.classList.add('sel');importModeAut=mc.dataset.mode});
+  $('#pvCancelAut').onclick=()=>{pendingAut=null;$('#importPanelAut').classList.add('hidden');$('#dropZoneAut').classList.remove('hidden');$('#fileInputAut').value=''};
+  $('#btnConfirmAut').onclick=doImportAut;
+  $('#btnDownloadSavedAut').onclick=()=>downloadSavedSheet('aut');
+
+  $('#restoreDbInput').onchange=e=>handleRestoreDatabaseJSON(e.target.files[0]);
+  $('#btnNewUser').onclick=()=>openUserForm(null,-1);
+  $('#btnCloudConfig').onclick=openCloudConfigModal;
+  $('#btnExportOnlineHTML').onclick=exportEmbeddedHTML;
+
+  await loadAllDatabases();
+  window.__dbReady=true;
+  ensureAdmin();
+  [...(DB.declaracoes||[]).map(r=>r.vendedor),...(DB.autorizacoes||[]).map(r=>r.vendedor)].filter(Boolean).forEach(ensureVendedorUser);
+  await saveLocalOnly();
+  applyTheme();
+  populateYearSelects();
+
+  const ses=verifySignedSession();
+  if(ses){
+    currentUser=ses;
+    resetInactivityWatchdog();
+    enterApp();
+    if(ses.mustChange===true)setTimeout(()=>openChangePassword(true),300);
+  }else{
+    $('#loginView').classList.remove('hidden');
+  }
+
+  pullFromCloud(true);
+
+  iniciarTempoReal();
+  
+  // Polling removido para não bugar os gráficos. O WebSocket já mantém tudo em tempo real.
+  // O pullFromCloud só será executado ao clicar em "Sincronizar" ou ao logar.
+  
+  window.addEventListener('focus',()=>{if(getCloudBaseUrl())pullFromCloud(true)});
+}
+init();
+</script>
+</body>
+</html>
